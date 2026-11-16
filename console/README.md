@@ -1,6 +1,6 @@
-# PACK-IE Console
+# OpenBGA Interface Engine Console
 
-Desktop console for the PACK-IE engine: Tauri 2 shell (`src-tauri/`) around a React 19 app
+Desktop console for the Interface Engine: Tauri 2 shell (`src-tauri/`) around a React 19 app
 (`src/`). Inside Tauri it attaches to the engine over local IPC (`src/api/ipc/`); in a browser,
 or with `?mock=1` in the URL, it runs against a mock engine (`src/api/mock/`) with synthetic
 data. Navigation and pages follow [docs/architecture.md §8](../docs/architecture.md).

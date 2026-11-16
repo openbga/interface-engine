@@ -1,6 +1,6 @@
 # Running and monitoring
 
-The PACK-IE engine runs on the lab computer. The console and command line connect to its
+The Interface Engine runs on the lab computer. The console and command line connect to its
 local management interface. Closing the console leaves the engine and its channels
 running.
 
@@ -542,7 +542,7 @@ alerts, not patient-result notifications.
 
 | Target or test | Behavior |
 | --- | --- |
-| E-mail | Plain text; subject starts `[PACK-IE <node>] <SEVERITY> <code> raised` or `cleared`, with scope id where applicable. |
+| E-mail | Plain text; subject starts `[Interface Engine <node>] <SEVERITY> <code> raised` or `cleared`, with scope id where applicable. |
 | Webhook | JSON POST with `Content-Type: application/json` and optional bearer authorization. Only 2xx is success; redirects fail. |
 | `packie notify test` | Sends one `test` / `info` / `test` message to every target, regardless of severity selection; prints each result. Audited as `notification_test`. Add `--json` for structured results. |
 
@@ -578,7 +578,7 @@ The transcript is separate from stored messages and logs and stays in local memo
 Each pane retains the newest 1,000 segments; older segments leave the view. A slow
 viewer can miss observations while the channel continues. The transcript survives
 endpoint reconnects while its subscription stays open. Stopping capture leaves the
-already displayed bytes available in that page until cleared or closed. PACK-IE does not
+already displayed bytes available in that page until cleared or closed. The engine does not
 save transcript bytes to a file automatically. There is no CLI transcript command.
 
 See [channel behavior](../spec/bridge-channels.md),

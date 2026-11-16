@@ -164,7 +164,7 @@ jobs:
           packaging/macos/build-pkg.sh
           # upload-artifact zips lose symlinks and modes; ship the console app as a ditto archive.
           mkdir -p target/packaging
-          ditto -c -k --keepParent "$PACKIE_CONSOLE_APP" "target/packaging/packie-console-$BUILD_TARGET.app.zip"
+          ditto -c -k --keepParent "$PACKIE_CONSOLE_APP" "target/packaging/openbga-interface-engine-console-$BUILD_TARGET.app.zip"
 
       - name: Installer (Windows)
         if: runner.os == 'Windows'
@@ -198,7 +198,7 @@ jobs:
               ;;
             macOS)
               cp "target/$BUILD_TARGET/release/packie" "$stage/engine/"
-              mv "target/packaging/packie-console-$BUILD_TARGET.app.zip" "$stage/console/"
+              mv "target/packaging/openbga-interface-engine-console-$BUILD_TARGET.app.zip" "$stage/console/"
               cp target/packaging/*.pkg "$stage/installer/"
               ;;
           esac
@@ -208,21 +208,21 @@ jobs:
       - name: Upload engine binary
         uses: actions/upload-artifact@v4
         with:
-          name: packie-${{ steps.version.outputs.label }}-${{ matrix.target }}
+          name: openbga-interface-engine-${{ steps.version.outputs.label }}-${{ matrix.target }}
           path: release-artifacts/engine/*
           if-no-files-found: error
 
       - name: Upload console bundle
         uses: actions/upload-artifact@v4
         with:
-          name: packie-console-${{ steps.version.outputs.label }}-${{ matrix.target }}
+          name: openbga-interface-engine-console-${{ steps.version.outputs.label }}-${{ matrix.target }}
           path: release-artifacts/console/*
           if-no-files-found: error
 
       - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
-          name: packie-installer-${{ steps.version.outputs.label }}-${{ matrix.target }}
+          name: openbga-interface-engine-installer-${{ steps.version.outputs.label }}-${{ matrix.target }}
           path: release-artifacts/installer/*
           if-no-files-found: error
 

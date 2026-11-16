@@ -1,4 +1,4 @@
-//! The Positive ACK engine: the composition root that `packie run` and the OS service call
+//! The Interface Engine: the composition root that `packie run` and the OS service call
 //! (`docs/architecture.md` §1).
 //!
 //! [`run`] loads `bootstrap.json`, starts logging, loads the newest valid saved runtime

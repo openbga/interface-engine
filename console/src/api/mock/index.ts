@@ -230,7 +230,7 @@ export class MockEngineApi extends MockHost implements EngineApi {
   exportMessages(request: MessageExportRequest): Promise<MessageExportResult | null> {
     return this.request(() => {
       const { content, rows } = audited.exportMessages(this.world, request);
-      const name = `packie-messages.${request.format}`;
+      const name = `interface-engine-messages.${request.format}`;
       downloadText(name, content);
       return { savedTo: name, rows };
     });
@@ -319,7 +319,7 @@ export class MockEngineApi extends MockHost implements EngineApi {
   exportAudit(request: AuditExportRequest): Promise<AuditExportResult | null> {
     return this.request(() => {
       const { content, rows } = this.world.audit.exportText(request.filter, request.format);
-      const name = `packie-audit.${request.format === "csv" ? "csv" : "jsonl"}`;
+      const name = `interface-engine-audit.${request.format === "csv" ? "csv" : "jsonl"}`;
       downloadText(name, content);
       return { savedTo: name, rows };
     });

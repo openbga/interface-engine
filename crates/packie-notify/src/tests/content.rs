@@ -80,17 +80,17 @@ fn the_subject_names_node_severity_code_state_and_scope() {
         (
             "Lab One",
             &in_channel,
-            "[PACK-IE Lab One] WARNING no_peer_connected raised: chan-a",
+            "[Interface Engine Lab One] WARNING no_peer_connected raised: chan-a",
         ),
         (
             "Lab One",
             &at_endpoint,
-            "[PACK-IE Lab One] WARNING no_peer_connected cleared: ep-1",
+            "[Interface Engine Lab One] WARNING no_peer_connected cleared: ep-1",
         ),
         (
             "Lab\r\nBcc: x",
             &unscoped,
-            "[PACK-IE Lab  Bcc: x] WARNING no_peer_connected cleared",
+            "[Interface Engine Lab  Bcc: x] WARNING no_peer_connected cleared",
         ),
     ] {
         assert_eq!(Content::from_alert(node, alert).subject(), subject);
@@ -102,8 +102,15 @@ fn the_mail_is_plain_text_from_the_settings() {
     let settings = settings(&routing()).email.unwrap();
     let content = Content::from_alert("Lab One", &raised(Severity::Critical, "chan-a"));
     let message = email::build_message(&settings, &content).unwrap();
-    let text = String::from_utf8(message.formatted()).unwrap();
-    assert!(text.contains("Subject: [PACK-IE Lab One] CRITICAL no_peer_connected raised: chan-a"));
+    // A long header line is folded; unfold it before comparing.
+    let text = String::from_utf8(message.formatted())
+        .unwrap()
+        .replace("\r\n ", " ");
+    assert!(
+        text.contains(
+            "Subject: [Interface Engine Lab One] CRITICAL no_peer_connected raised: chan-a"
+        )
+    );
     assert!(text.contains("From: packie@lab.example"));
     assert!(text.contains("To: oncall@lab.example"));
     assert!(text.contains("Content-Type: text/plain"));

@@ -1,4 +1,4 @@
-//! Observability for Positive ACK (`docs/architecture.md` §6).
+//! Observability for OpenBGA Interface Engine (`docs/architecture.md` §6).
 //!
 //! - [`init`] installs the process-wide `tracing` subscriber: JSON lines to
 //!   `<logs>/packie.YYYY-MM-DD[.N].log` (rotation at local midnight and at a size limit,

@@ -1,6 +1,6 @@
 # Configuration field reference
 
-Use this reference to look up fields while editing PACK-IE configuration. The
+Use this reference to look up fields while editing engine configuration. The
 [configuration specification](../spec/configuration.md) defines validation, apply behavior,
 path syntax and transformation rules in full.
 

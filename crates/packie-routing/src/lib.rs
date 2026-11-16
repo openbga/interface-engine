@@ -1,4 +1,4 @@
-//! Channel supervisors for Positive ACK (`docs/architecture.md` §7): the engine's
+//! Channel supervisors for OpenBGA Interface Engine (`docs/architecture.md` §7): the engine's
 //! [`ChannelRegistry`](packie_engine::ChannelRegistry) implementation.
 //!
 //! - [`RoutingRegistry`] applies configuration per channel, serializes apply, pause,

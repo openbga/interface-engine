@@ -68,7 +68,7 @@ pub(super) fn ensure_operators_group(
             "localgroup",
             OPERATORS_GROUP,
             "/add",
-            "/comment:Positive ACK operators",
+            "/comment:OpenBGA Interface Engine operators",
         ],
         &GROUP_EXISTS,
     )?;
@@ -133,7 +133,7 @@ mod tests {
         assert_eq!(
             runner.calls(),
             [
-                "net localgroup PACK-IE Operators /add /comment:Positive ACK operators",
+                "net localgroup PACK-IE Operators /add /comment:OpenBGA Interface Engine operators",
                 r"net localgroup PACK-IE Operators LABPC\alice /add",
             ]
         );

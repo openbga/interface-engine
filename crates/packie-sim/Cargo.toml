@@ -1,6 +1,6 @@
 [package]
 name = "packie-sim"
-description = "Positive ACK simulator: scripted peers and the scenario runner"
+description = "OpenBGA Interface Engine simulator: scripted peers and the scenario runner"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

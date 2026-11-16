@@ -1,6 +1,6 @@
 [package]
 name = "packie"
-description = "Positive ACK engine host and command line"
+description = "OpenBGA Interface Engine host and command line"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

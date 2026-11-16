@@ -83,10 +83,10 @@ export function transmissionCsv(
   return `${sheet}${listed}\r\n${TRUNCATED_MARKER}\r\n`;
 }
 
-/** `packie-transmission-<channel>-<date>.csv`, the date being the day the report was generated. */
+/** `interface-engine-transmission-<channel>-<date>.csv`, the date being the day the report was generated. */
 export function transmissionFileName(report: TransmissionReport): string {
   const channel = report.channelId.replace(/[^A-Za-z0-9._-]/g, "_");
-  return `packie-transmission-${channel}-${report.generatedAt.slice(0, 10)}.csv`;
+  return `interface-engine-transmission-${channel}-${report.generatedAt.slice(0, 10)}.csv`;
 }
 
 export function transmissionFile(

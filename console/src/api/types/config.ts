@@ -158,7 +158,7 @@ export interface ConnectorSettings {
   ackMessageTypes?: string[];
   /** HL7 source: answer order messages with an order response instead of an `ACK`. */
   replyType?: "ack" | "order_response";
-  /** ASTM only: the side PACK-IE plays in link contention. */
+  /** ASTM only: the side the engine plays in link contention. */
   astmRole?: "computer" | "instrument";
   /** ASTM only: text characters per frame, 64 to 64000 (default 240). */
   maxFrameChars?: number;

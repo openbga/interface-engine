@@ -53,7 +53,7 @@ pub struct VersionInfo {
 }
 
 /// A sign-off that a version was verified after the change (CAP GEN.48500). What verified
-/// means is the laboratory's procedure; PACK-IE records who, when and their reference.
+/// means is the laboratory's procedure; the engine records who, when and their reference.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 pub struct Verification {
     /// The OS account that signed off.

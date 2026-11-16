@@ -1,6 +1,6 @@
 [package]
 name = "packie-routing"
-description = "Channel supervisors for Positive ACK: bridge channels, buffers, retry and taps; implements the engine's channel registry"
+description = "Channel supervisors for OpenBGA Interface Engine: bridge channels, buffers, retry and taps; implements the engine's channel registry"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

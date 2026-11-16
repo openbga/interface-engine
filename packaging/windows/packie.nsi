@@ -1,4 +1,4 @@
-; Positive ACK installer for Windows (NSIS 3, built by build.ps1 with makensis).
+; OpenBGA Interface Engine installer for Windows (NSIS 3, built by build.ps1 with makensis).
 ;
 ; Defines passed on the makensis command line (see build.ps1):
 ;   VERSION            product version, e.g. 0.1.0 (required)
@@ -19,12 +19,15 @@ Unicode true
   !error "OUTFILE is not defined"
 !endif
 
-!define PRODUCT "Positive ACK"
+; DIRNAME is the earlier product name, kept as the program and data folder name so that existing
+; installations, bootstraps and state stay where they are.
+!define PRODUCT "OpenBGA Interface Engine"
+!define DIRNAME "Positive ACK"
 !define UNINSTALL_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\PositiveACK"
 
 Name "${PRODUCT}"
 OutFile "${OUTFILE}"
-InstallDir "$PROGRAMFILES64\${PRODUCT}"
+InstallDir "$PROGRAMFILES64\${DIRNAME}"
 InstallDirRegKey HKLM "${UNINSTALL_KEY}" "InstallLocation"
 RequestExecutionLevel admin
 ShowInstDetails show
@@ -45,7 +48,7 @@ UninstPage instfiles
 ; Runs "packie.exe --bootstrap <file> service <verb>" and aborts the installer or uninstaller with
 ; the captured output when it fails.
 !macro RunService VERB
-  nsExec::ExecToStack '"$INSTDIR\packie.exe" --bootstrap "$APPDATA\${PRODUCT}\bootstrap.json" service ${VERB}'
+  nsExec::ExecToStack '"$INSTDIR\packie.exe" --bootstrap "$APPDATA\${DIRNAME}\bootstrap.json" service ${VERB}'
   Pop $0
   Pop $1
   DetailPrint "$1"
@@ -62,7 +65,7 @@ UninstPage instfiles
 ; registry unexpanded (other entries keep their %VARIABLES%); setting PACKIE_BOOTSTRAP through
 ; .NET announces the change to running programs.
 !macro SetEnvironment
-  nsExec::ExecToStack `powershell -NoProfile -ExecutionPolicy Bypass -Command "$$k = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey('SYSTEM\CurrentControlSet\Control\Session Manager\Environment', $$true); $$p = $$k.GetValue('Path', '', 'DoNotExpandEnvironmentNames'); $$d = '$INSTDIR'; if (($$p -split ';') -notcontains $$d) { $$k.SetValue('Path', ($$p.TrimEnd(';') + ';' + $$d), 'ExpandString') }; [Environment]::SetEnvironmentVariable('PACKIE_BOOTSTRAP', '$APPDATA\${PRODUCT}\bootstrap.json', 'Machine')"`
+  nsExec::ExecToStack `powershell -NoProfile -ExecutionPolicy Bypass -Command "$$k = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey('SYSTEM\CurrentControlSet\Control\Session Manager\Environment', $$true); $$p = $$k.GetValue('Path', '', 'DoNotExpandEnvironmentNames'); $$d = '$INSTDIR'; if (($$p -split ';') -notcontains $$d) { $$k.SetValue('Path', ($$p.TrimEnd(';') + ';' + $$d), 'ExpandString') }; [Environment]::SetEnvironmentVariable('PACKIE_BOOTSTRAP', '$APPDATA\${DIRNAME}\bootstrap.json', 'Machine')"`
   Pop $0
   Pop $1
   ${If} $0 != 0
@@ -85,7 +88,7 @@ Section "Install"
   ; Upgrade: remove the previous service registration so packie.exe is not locked.
   ${If} ${FileExists} "$INSTDIR\packie.exe"
     DetailPrint "Removing the previous service"
-    nsExec::ExecToStack '"$INSTDIR\packie.exe" --bootstrap "$APPDATA\${PRODUCT}\bootstrap.json" service uninstall'
+    nsExec::ExecToStack '"$INSTDIR\packie.exe" --bootstrap "$APPDATA\${DIRNAME}\bootstrap.json" service uninstall'
     Pop $0
     Pop $1
     ${If} $0 != 0
@@ -98,9 +101,9 @@ Section "Install"
   WriteUninstaller "$INSTDIR\uninstall.exe"
 
   ; Default bootstrap: never overwrite an operator's file.
-  ${IfNot} ${FileExists} "$APPDATA\${PRODUCT}\bootstrap.json"
-    CreateDirectory "$APPDATA\${PRODUCT}"
-    SetOutPath "$APPDATA\${PRODUCT}"
+  ${IfNot} ${FileExists} "$APPDATA\${DIRNAME}\bootstrap.json"
+    CreateDirectory "$APPDATA\${DIRNAME}"
+    SetOutPath "$APPDATA\${DIRNAME}"
     File /oname=bootstrap.json "bootstrap.json"
     SetOutPath "$INSTDIR"
   ${EndIf}
@@ -122,7 +125,7 @@ Section "Install"
 
   WriteRegStr HKLM "${UNINSTALL_KEY}" "DisplayName" "${PRODUCT}"
   WriteRegStr HKLM "${UNINSTALL_KEY}" "DisplayVersion" "${VERSION}"
-  WriteRegStr HKLM "${UNINSTALL_KEY}" "Publisher" "Positive ACK contributors"
+  WriteRegStr HKLM "${UNINSTALL_KEY}" "Publisher" "OpenBGA contributors"
   WriteRegStr HKLM "${UNINSTALL_KEY}" "InstallLocation" "$INSTDIR"
   WriteRegStr HKLM "${UNINSTALL_KEY}" "UninstallString" '"$INSTDIR\uninstall.exe"'
   WriteRegStr HKLM "${UNINSTALL_KEY}" "QuietUninstallString" '"$INSTDIR\uninstall.exe" /S'
@@ -143,5 +146,5 @@ Section "Uninstall"
   RMDir "$INSTDIR"
   DeleteRegKey HKLM "${UNINSTALL_KEY}"
 
-  DetailPrint "Kept $APPDATA\${PRODUCT} (bootstrap, state and logs). Delete it by hand to remove all data."
+  DetailPrint "Kept $APPDATA\${DIRNAME} (bootstrap, state and logs). Delete it by hand to remove all data."
 SectionEnd

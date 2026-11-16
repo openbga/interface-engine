@@ -1,4 +1,4 @@
-//! `packie`: hosts the Positive ACK engine and talks to a running one.
+//! `packie`: hosts the Interface Engine and talks to a running one.
 //!
 //! `packie run` runs the engine in the foreground until Ctrl-C (or SIGTERM; Ctrl-Break on
 //! Windows). `packie status`,
@@ -39,7 +39,7 @@ use crate::messages::MessagesCommand;
 
 use crate::output::{eprint_line, print_line};
 
-/// Positive ACK: a laboratory interface engine.
+/// OpenBGA Interface Engine: a laboratory interface engine.
 #[derive(Debug, Parser)]
 #[command(name = "packie", version, about, propagate_version = true)]
 struct Cli {

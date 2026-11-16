@@ -1,6 +1,6 @@
-# Install and control PACK-IE
+# Install and control OpenBGA Interface Engine
 
-PACK-IE runs on one laboratory computer. The engine runs as an OS service; PACK-IE Console connects
+OpenBGA Interface Engine runs on one laboratory computer. The engine runs as an OS service; OpenBGA Interface Engine Console connects
 locally and can be closed without stopping traffic. Use an administrator terminal on Windows
 or `sudo` on macOS and Linux for system service changes.
 
@@ -15,8 +15,8 @@ and Windows only when it was available to the packaging script.
 
 | Platform | Package and installation | Verification status |
 | --- | --- | --- |
-| macOS | `packie-<version>-macos-<arch>.pkg`; `sudo installer -pkg /path/to/package.pkg -target /` | Installed and running as a system daemon on macOS arm64. Restart-after-kill, configuration-error stop, reboot and uninstall (VERIFY M5, M5a, M6) not yet run. |
-| Windows | `packie-<version>-windows-x64-setup.exe`; run as administrator, or use `/S` for silent installation | The engine builds and passes its tests on Windows in CI. The installer and service checks in [VERIFY.md](../../packaging/VERIFY.md) have not been run on a Windows machine; run them before relying on it. |
+| macOS | `openbga-interface-engine-<version>-macos-<arch>.pkg`; `sudo installer -pkg /path/to/package.pkg -target /` | Installed and running as a system daemon on macOS arm64. Restart-after-kill, configuration-error stop, reboot and uninstall (VERIFY M5, M5a, M6) not yet run. |
+| Windows | `openbga-interface-engine-<version>-windows-x64-setup.exe`; run as administrator, or use `/S` for silent installation | The engine builds and passes its tests on Windows in CI. The installer and service checks in [VERIFY.md](../../packaging/VERIFY.md) have not been run on a Windows machine; run them before relying on it. |
 | Debian-family Linux with systemd | `packie_<version>_<arch>.deb`; `sudo apt install ./packie_<version>_<arch>.deb` | Install, service, reboot, upgrade and removal checked on Ubuntu 24.04 arm64; x86_64 and physical serial hardware not yet verified. Linux console is not packaged. |
 
 The installers create the bootstrap only if it is missing, register the service and start it.
@@ -29,9 +29,16 @@ service install command below on the target computer.
 | Bootstrap | `/Library/Application Support/Positive ACK/bootstrap.json` | `C:\ProgramData\Positive ACK\bootstrap.json` | `/etc/packie/bootstrap.json` |
 | State | `/Library/Application Support/Positive ACK/state` | `C:\ProgramData\Positive ACK\state` | `/var/lib/packie` |
 | Logs | `/Library/Logs/Positive ACK` | `C:\ProgramData\Positive ACK\logs` | `/var/log/packie` |
-| Service | `/Library/LaunchDaemons/org.openbga.positiveack.plist` | Service `packie`, display name Positive ACK | `/etc/systemd/system/packie.service` |
+| Service | `/Library/LaunchDaemons/org.openbga.positiveack.plist` | Service `packie`, display name OpenBGA Interface Engine | `/etc/systemd/system/packie.service` |
 | Service account | `root` | `LocalSystem` | System user and group `packie`; supplementary `dialout` when present |
-| Console | `/Applications/PACK-IE Console.app` when included | Separate PACK-IE Console installation when included | Not included in the `.deb` |
+| Console | `/Applications/OpenBGA Interface Engine Console.app` when included | Separate OpenBGA Interface Engine Console installation when included | Not included in the `.deb` |
+
+The product was earlier named Positive ACK (PACK-IE). Names that locate or identify an
+installation keep the earlier name so that installed engines, bootstraps and state are found
+unchanged: the `Positive ACK` folders above, the `PACK-IE Operators` group, the
+`org.openbga.positiveack` launchd label and package identifiers, the `PositiveACK` Windows
+uninstall key, the `packie` command, service and group, the `PACKIE_*` variables and the
+`packie-backup-*` directory names. Only displayed names changed.
 
 Inside the state directory, runtime configuration is `runtime.json`, saved versions are in
 `config/`, and message storage is in `store/` (`messages.sqlite3`, its SQLite sidecar files,
@@ -181,7 +188,7 @@ therefore attaches without any setting. Set `PACKIE_BOOTSTRAP` only for a differ
 such as a macOS `--user` agent or a development checkout; for example, from Terminal:
 
 ```sh
-PACKIE_BOOTSTRAP=/absolute/path/bootstrap.json "/Applications/PACK-IE Console.app/Contents/MacOS/packie-console"
+PACKIE_BOOTSTRAP=/absolute/path/bootstrap.json "/Applications/OpenBGA Interface Engine Console.app/Contents/MacOS/packie-console"
 ```
 
 On Windows, set the variable in your user environment and open a new login session, or set it in
@@ -349,8 +356,8 @@ with `packie secrets set`.
 | Service registration only | Platform `service uninstall` command above | Binary, console, bootstrap, state, logs and secrets |
 | macOS application and engine | From a source checkout: `sudo packaging/macos/uninstall.sh` | Bootstrap, state and logs; add `--purge` only to delete those directories too |
 | Linux package | `sudo apt remove packie` | Bootstrap, state (including the secrets file `/var/lib/packie/secrets.json`) and logs; `sudo apt purge packie` deletes them |
-| Windows engine | Apps and features → Positive ACK, or `& 'C:\Program Files\Positive ACK\uninstall.exe'` in PowerShell | `C:\ProgramData\Positive ACK` remains; delete it manually only when its data is no longer needed |
-| Windows console | Remove PACK-IE Console separately through Apps and features | It has a separate uninstall entry |
+| Windows engine | Apps and features → OpenBGA Interface Engine, or `& 'C:\Program Files\Positive ACK\uninstall.exe'` in PowerShell | `C:\ProgramData\Positive ACK` remains; delete it manually only when its data is no longer needed |
+| Windows console | Remove OpenBGA Interface Engine Console separately through Apps and features | It has a separate uninstall entry |
 
 Purge deletes laboratory messages, audit and configuration history in the removed state path,
 including pre-restore copies there. Backups outside that path remain. Package removal does

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Prints the PACK-IE version: `[workspace.package] version` of the workspace Cargo.toml.
+# Prints the Interface Engine version: `[workspace.package] version` of the workspace Cargo.toml.
 # Every packaging script uses this; packaging/version.ps1 holds the same logic for Windows.
 set -eu
 

@@ -100,11 +100,11 @@ impl Content {
             .or(self.destination_id.as_deref())
     }
 
-    /// `[PACK-IE <node>] <SEVERITY> <code> raised|cleared: <scope>`; control characters in the
+    /// `[Interface Engine <node>] <SEVERITY> <code> raised|cleared: <scope>`; control characters in the
     /// node name become spaces so the subject stays one header line.
     pub(crate) fn subject(&self) -> String {
         let mut subject = format!(
-            "[PACK-IE {}] {} {} {}",
+            "[Interface Engine {}] {} {} {}",
             blank_controls(&self.node),
             self.severity.to_ascii_uppercase(),
             self.code,
@@ -143,7 +143,7 @@ impl Content {
             lines.push(format!("Occurrences: {}", self.occurrences));
         }
         lines.push(String::new());
-        lines.push("Sent by Positive ACK. Open the console to investigate.".to_owned());
+        lines.push("Sent by OpenBGA Interface Engine. Open the console to investigate.".to_owned());
         lines.join("\n")
     }
 

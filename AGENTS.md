@@ -1,4 +1,4 @@
-# Agent instructions — Positive ACK Interface Engine
+# Agent instructions — OpenBGA Interface Engine
 
 Required reading: [docs/architecture.md](docs/architecture.md), [docs/requirements.md](docs/requirements.md)
 and the `docs/spec/` file for your area. [STATUS.md](STATUS.md) is the current state of the
@@ -51,9 +51,13 @@ store every message durably, transform it and deliver it to one or more destinat
     `cargo test -p packie-ipc --test typescript`, never hand-edited. When you create a crate,
     write `src/lib.rs` together with its `Cargo.toml` (the workspace glob picks up every
     `crates/*` manifest, and a manifest without a target breaks cargo for everyone).
-11. **Names.** Keep other products' and organizations' names out of code and documentation,
-    except where a name identifies a protocol, an instrument family, a standard, an operating
-    system or a dependency.
+11. **Names.** The product is **OpenBGA Interface Engine** (console: OpenBGA Interface Engine
+    Console); use the full name with the OpenBGA prefix in primary titles and lockups, and
+    "the engine" in running text. `packie` stays the command, crate, service and variable
+    prefix, and the install folders keep their earlier names (see
+    [install](docs/operations/install.md)). Keep other products' and organizations' names out of code
+    and documentation, except where a name identifies a protocol, an instrument family, a
+    standard, an operating system or a dependency.
 12. **Report briefly:** what changed, which checks ran with results, new dependencies and
     open issues. Link files instead of pasting them. When delegating, give each child owned
     paths and a verification scope, and pass these rules on.
