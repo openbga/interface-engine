@@ -55,7 +55,7 @@ Section: science
 Priority: optional
 Depends: libc6, systemd
 Installed-Size: $installed_kb
-Description: OpenBGA Interface Engine laboratory interface engine
+Description: OpenBGA Interface Engine, a laboratory interface engine
  Runs as a systemd service (packie) on one laboratory computer and moves instrument
  and LIS messages between endpoints. Configuration lives in /etc/packie/bootstrap.json.
 CONTROL

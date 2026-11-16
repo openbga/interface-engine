@@ -14,7 +14,7 @@ use crate::service::{DISPLAY_NAME, MAX_STOP_SECONDS, SERVICE_NAME, ServiceStatus
 pub(super) const ACCOUNT: &str = "LocalSystem";
 
 /// What the SCM shows for the service.
-pub(super) const DESCRIPTION: &str = "OpenBGA Interface Engine laboratory interface engine";
+pub(super) const DESCRIPTION: &str = "OpenBGA Interface Engine, a laboratory interface engine";
 /// The delay before the SCM restarts a failed service.
 pub(super) const RESTART_DELAY: Duration = Duration::from_secs(5);
 /// Failure actions configured, all restarts; the SCM repeats the last action for any

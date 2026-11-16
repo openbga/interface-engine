@@ -38,7 +38,8 @@ installation keep the earlier name so that installed engines, bootstraps and sta
 unchanged: the `Positive ACK` folders above, the `PACK-IE Operators` group, the
 `org.openbga.positiveack` launchd label and package identifiers, the `PositiveACK` Windows
 uninstall key, the `packie` command, service and group, the `PACKIE_*` variables and the
-`packie-backup-*` directory names. Only displayed names changed.
+`packie-backup-*` directory names. Only displayed names changed. A console installed under
+the earlier name (`PACK-IE Console`) is a separate application and is removed separately.
 
 Inside the state directory, runtime configuration is `runtime.json`, saved versions are in
 `config/`, and message storage is in `store/` (`messages.sqlite3`, its SQLite sidecar files,
