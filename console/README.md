@@ -27,6 +27,7 @@ see the "engine is not running" screen.
 ```sh
 npm run typecheck && npm run lint && npm test && npm run build
 npm run knip                 # unused files, exports and dependencies
+npm run changelog:check      # changelog.d/ entries are valid and CHANGELOG.md is current
 cargo check --manifest-path src-tauri/Cargo.toml
 ```
 

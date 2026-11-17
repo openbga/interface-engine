@@ -1,0 +1,26 @@
+{
+  "id": "whats-new",
+  "title": "What's new",
+  "summary": "The list of changes to the engine and the console, and how it marks the ones you have not seen.",
+  "routes": [],
+  "sections": [
+    {
+      "title": "Opening the list",
+      "paragraphs": [
+        "What's new in the top bar opens the list of changes on every page. When it shows a number, that many changes arrived since you last looked; the button's tooltip says so too. The first time the console opens on a computer it shows no number, because nothing is new to you yet, but the list still has every change. Opening the list clears the number, and those changes carry a New label until you close it."
+      ]
+    },
+    {
+      "title": "How the list is ordered",
+      "paragraphs": [
+        "Changes not yet in a release come first, then each release, newest first, with the dates its changes cover. Inside each, changes are grouped as high, medium and low impact, newest first. Each shows whether something was added, changed, fixed, removed, deprecated or a security fix, its date and the part of the console it concerns. Open, where shown, goes to that page and closes the list."
+      ]
+    },
+    {
+      "title": "Where it comes from",
+      "paragraphs": [
+        "The list ships with the console; nothing is fetched from the network. The same changes, with technical notes for whoever installs or configures the engine, are in CHANGELOG.md in the source code. Where you last looked is remembered by this console on this computer; on another computer the count starts again from the newest change."
+      ]
+    }
+  ]
+}

@@ -100,7 +100,7 @@ one during an apply), counts of channels by state, active alerts by severity, un
 deliveries, store and free-disk state, and the connection status to the engine
 ([section 11](#11-settings-help-and-engine-connection)). The console's top bar also shows
 "Signed in as `<account>`" when the engine's hello supplies the OS account, so operators see
-whom the audit log and the change history will name.
+whom the audit log and the change history will name, and **What's new** (below).
 
 ### Sorting and emphasis
 
@@ -424,6 +424,15 @@ show the active counts.
   exactly, including case. Older events load by a sequence cursor; reading events is not
   audited, while exporting and verifying are. Event details can include entered notes and
   searched identifiers and are concealed after the idle timeout.
+- **What's new** in the top bar opens the list of changes built into the console from
+  `changelog.d/` (the same groups and order as `CHANGELOG.md`: unreleased first, then each
+  release newest first with its date range; high, medium and low impact; newest first, then by
+  title). Each change shows its type, title, date, area and summary, and a link to its page
+  when it has one; technical notes stay in `CHANGELOG.md`. The button shows how many changes
+  are newer than the newest one shown on this computer (name and tooltip "What's new: 3 new
+  changes"); opening the list clears it and marks those changes New until it closes. On the
+  first visit, with nothing recorded yet, the newest change is recorded as seen at once, so no
+  count shows. What was seen is kept in the console's local storage; nothing is fetched.
 - **Help** is available on every page in a short panel; its text is maintained with the page
   and updated whenever the behavior it describes changes (CON-08).
 - **Engine connection**: statuses `connected`, `reconnecting` (last known state shown dimmed)
