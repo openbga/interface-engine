@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://openbga.github.io/pack-ie/sitemap.xml
+Sitemap: https://openbga.github.io/interface-engine/sitemap.xml

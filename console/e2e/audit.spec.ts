@@ -168,7 +168,7 @@ test.describe("Audit export", () => {
     await expect(dialog).toContainText("The export is recorded in the audit log");
     await expect(dialog).toContainText("Filters in effect: action Configuration applied.");
     const file = await downloadFrom(page, dialog.getByRole("button", { name: "Export" }));
-    expect(file.suggestedFilename()).toBe("packie-audit.csv");
+    expect(file.suggestedFilename()).toBe("interface-engine-audit.csv");
     const lines = (await downloadText(file)).trimEnd().split("\n");
     expect(lines[0]).toBe(CSV_HEADER);
     expect(lines.length - 1).toBe(shown);
@@ -176,7 +176,7 @@ test.describe("Audit export", () => {
 
     await expect(dialog).toHaveCount(0);
     await expect(toast(page, "Audit log exported")).toContainText(
-      `${shown} events saved to packie-audit.csv.`,
+      `${shown} events saved to interface-engine-audit.csv.`,
     );
 
     await page.getByRole("button", { name: "Clear filters" }).click();

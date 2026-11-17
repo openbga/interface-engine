@@ -17,13 +17,13 @@ from the Tauri bundle output under `console/src-tauri/target[/<triple>]/release/
 | --- | --- | --- | --- |
 | Build on | macOS | any Linux with `dpkg-deb` | Windows with NSIS 3 (`makensis` on PATH) |
 | Command | `packaging/macos/build-pkg.sh` | `packaging/linux/build-deb.sh [bin] [arch]` | `packaging\windows\build.ps1` |
-| Artifact | `packie-<ver>-macos-<arch>.pkg` | `packie_<ver>_<arch>.deb` | `packie-<ver>-windows-x64-setup.exe` |
+| Artifact | `openbga-interface-engine-<ver>-macos-<arch>.pkg` | `packie_<ver>_<arch>.deb` | `openbga-interface-engine-<ver>-windows-x64-setup.exe` |
 | Install | double-click, or `sudo installer -pkg <pkg> -target /` | `sudo apt install ./packie_<ver>_<arch>.deb` | run as administrator (`/S` for silent) |
 | Binary | `/usr/local/bin/packie` | `/usr/bin/packie` | `C:\Program Files\Positive ACK\packie.exe` |
 | Bootstrap (written only if missing) | `/Library/Application Support/Positive ACK/bootstrap.json` | `/etc/packie/bootstrap.json` (template `/usr/share/packie/bootstrap.json`) | `C:\ProgramData\Positive ACK\bootstrap.json` |
 | State | `/Library/Application Support/Positive ACK/state` | `/var/lib/packie` | `C:\ProgramData\Positive ACK\state` |
 | Logs | `/Library/Logs/Positive ACK` | `/var/log/packie` | `C:\ProgramData\Positive ACK\logs` |
-| Console | `/Applications/PACK-IE Console.app` | not packaged | Tauri setup run silently |
+| Console | `/Applications/OpenBGA Interface Engine Console.app` | not packaged | Tauri setup run silently |
 | Remove | `sudo packaging/macos/uninstall.sh [--purge]` | `sudo apt remove packie` / `sudo apt purge packie` | Apps and features, or `uninstall.exe` |
 
 The Windows installer also adds the program directory to the system `PATH` and sets the
@@ -36,6 +36,9 @@ Defaults: node id `lab-node`, environment `prod`, secrets provider `keystore` (t
 store; the Linux package uses `file`, because a server has no Secret Service). Edit the
 bootstrap and restart the service to change them. On Linux and macOS the management socket
 is usable by the `packie` group.
+
+The `Positive ACK` folders and the other identifiers listed in
+[install](../docs/operations/install.md) keep the product's earlier name on purpose.
 
 Removal keeps the bootstrap, state and logs (they hold laboratory data). `--purge` (macOS) and
 `apt purge` (Linux) delete them as well; on Windows delete `C:\ProgramData\Positive ACK`
@@ -53,9 +56,9 @@ The build is native: an Apple Silicon host produces an `arm64` package (the inst
 `hostArchitectures` is set from the binary).
 
 ```sh
-(cd console && npm run tauri build)   # console/src-tauri/target/release/bundle/macos/PACK-IE Console.app (+ dmg/)
+(cd console && npm run tauri build)   # console/src-tauri/target/release/bundle/macos/OpenBGA Interface Engine Console.app (+ dmg/)
 cargo build --release -p packie          # target/release/packie
-packaging/macos/build-pkg.sh          # target/packaging/packie-<ver>-macos-<arch>.pkg
+packaging/macos/build-pkg.sh          # target/packaging/openbga-interface-engine-<ver>-macos-<arch>.pkg
 ```
 
 The Tauri build needs no signing identity and does not notarize. `build-pkg.sh` finds the
@@ -66,13 +69,13 @@ notarized: Gatekeeper rejects it when downloaded; install it with `sudo installe
 Inspect it without installing:
 
 ```sh
-pkg=target/packaging/packie-<ver>-macos-arm64.pkg
+pkg=target/packaging/openbga-interface-engine-<ver>-macos-arm64.pkg
 pkgutil --expand-full "$pkg" /tmp/packie-pkg      # Distribution, packie-engine.pkg/Scripts/{postinstall,bootstrap.json},
                                                # packie-engine.pkg/Payload/usr/local/bin/packie,
-                                               # packie-console.pkg/Payload/PACK-IE Console.app
+                                               # packie-console.pkg/Payload/OpenBGA Interface Engine Console.app
 lsbom -s /tmp/packie-pkg/packie-console.pkg/Bom      # file list of one component (also packie-engine.pkg/Bom)
-plutil -lint "/tmp/packie-pkg/packie-console.pkg/Payload/PACK-IE Console.app/Contents/Info.plist"
-codesign --verify --deep --strict -v "/tmp/packie-pkg/packie-console.pkg/Payload/PACK-IE Console.app"
+plutil -lint "/tmp/packie-pkg/packie-console.pkg/Payload/OpenBGA Interface Engine Console.app/Contents/Info.plist"
+codesign --verify --deep --strict -v "/tmp/packie-pkg/packie-console.pkg/Payload/OpenBGA Interface Engine Console.app"
 ```
 
 The bills of materials also list `._*` entries: they carry the `com.apple.provenance`

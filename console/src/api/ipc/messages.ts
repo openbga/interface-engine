@@ -103,7 +103,7 @@ export class MessageApi {
     let saved: { path: string; rows: number } | null;
     try {
       saved = await this.bridge.invoke("save_message_export", {
-        suggestedName: `packie-messages-${new Date().toISOString().slice(0, 10)}.${request.format}`,
+        suggestedName: `interface-engine-messages-${new Date().toISOString().slice(0, 10)}.${request.format}`,
         ...exportToIpc(request),
       });
     } catch (error) {

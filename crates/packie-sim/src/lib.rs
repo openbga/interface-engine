@@ -1,4 +1,4 @@
-//! The Positive ACK simulator: scripted peers and the scenario runner.
+//! The OpenBGA Interface Engine simulator: scripted peers and the scenario runner.
 //!
 //! A scenario (`tests/scenarios/*.json`, format in `docs/spec/scenarios.md`) loads an engine
 //! configuration, starts scripted peers (actors) on loopback TCP, virtual serial ports and

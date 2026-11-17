@@ -7,7 +7,7 @@
 #   PACKIE_BIN          the Linux packie binary (default: target/release/packie, or the only
 #                    target/<triple>/release/packie)
 #   PACKIE_DEB_ARCH     Debian architecture (amd64, arm64, ...); default: detected from the binary
-#   PACKIE_MAINTAINER   Maintainer field (default: Positive ACK contributors)
+#   PACKIE_MAINTAINER   Maintainer field (default: OpenBGA contributors)
 #   PACKIE_STAGE_ONLY   set to 1 to stop after staging the package tree (no dpkg-deb needed)
 # Not signed.
 set -euo pipefail
@@ -30,7 +30,7 @@ fi
 
 # Debian versions sort a pre-release before the release with "~", not "-".
 deb_version="${VERSION/-/~}"
-maintainer="${PACKIE_MAINTAINER:-Positive ACK contributors <noreply@invalid>}"
+maintainer="${PACKIE_MAINTAINER:-OpenBGA contributors <noreply@invalid>}"
 
 stage="$OUT_DIR/deb-stage"
 rm -rf "$stage"
@@ -55,7 +55,7 @@ Section: science
 Priority: optional
 Depends: libc6, systemd
 Installed-Size: $installed_kb
-Description: Positive ACK laboratory interface engine
+Description: OpenBGA Interface Engine, a laboratory interface engine
  Runs as a systemd service (packie) on one laboratory computer and moves instrument
  and LIS messages between endpoints. Configuration lives in /etc/packie/bootstrap.json.
 CONTROL

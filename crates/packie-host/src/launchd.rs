@@ -298,7 +298,7 @@ mod tests {
             scope,
             ..fake::spec(
                 "/usr/local/bin/packie",
-                "/Library/Application Support/PACK-IE/bootstrap & co.json",
+                "/Library/Application Support/Interface Engine/bootstrap & co.json",
             )
         }
     }
@@ -317,7 +317,7 @@ mod tests {
                 "/usr/local/bin/packie",
                 "run",
                 "--bootstrap",
-                "/Library/Application Support/PACK-IE/bootstrap & co.json",
+                "/Library/Application Support/Interface Engine/bootstrap & co.json",
                 "--service"
             ]
         );
@@ -360,7 +360,7 @@ mod tests {
         launchd.install(&spec(Scope::System)).unwrap();
         let calls = runner.calls();
         for expected in [
-            "dseditgroup -o create -r Positive ACK packie",
+            "dseditgroup -o create -r OpenBGA Interface Engine packie",
             "dseditgroup -o edit -a operator -t user packie",
             "chown root:packie /var/lib/packie",
             "chmod 0750 /var/lib/packie",
@@ -417,7 +417,7 @@ mod tests {
         assert_eq!(
             status.bootstrap.as_deref(),
             Some(Path::new(
-                "/Library/Application Support/PACK-IE/bootstrap & co.json"
+                "/Library/Application Support/Interface Engine/bootstrap & co.json"
             ))
         );
         // Installed but not loaded: launchctl print fails.

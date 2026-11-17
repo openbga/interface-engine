@@ -18,7 +18,7 @@ Tick each box and note any output that differs from **Expected**. Steps run in o
 
 ## Windows
 
-Use the installer `packie-<version>-windows-x64-setup.exe`. The installer adds the program
+Use the installer `openbga-interface-engine-<version>-windows-x64-setup.exe`. The installer adds the program
 directory to the system `PATH` and sets `PACKIE_BOOTSTRAP` to the default bootstrap, so `packie` works
 in any terminal opened **after** the installation. Then open **two** PowerShell windows:
 **Admin** ("Run as administrator") and **User** (normal).
@@ -36,13 +36,13 @@ in any terminal opened **after** the installation. Then open **two** PowerShell 
   `Bootstrap  C:\ProgramData\Positive ACK\bootstrap.json` and `IPC        \\.\pipe\packie-lab-node`.
 - [ ] W3. In **Admin**, run `sc.exe qc packie`.
   Expected: `START_TYPE : 2 AUTO_START`, `SERVICE_START_NAME : LocalSystem`,
-  `DISPLAY_NAME : Positive ACK`, and a `BINARY_PATH_NAME` with
+  `DISPLAY_NAME : OpenBGA Interface Engine`, and a `BINARY_PATH_NAME` with
   `C:\Program Files\Positive ACK\packie.exe`, `run --bootstrap`, the bootstrap path above and `--service`.
 - [ ] W4. In **Admin**, run `sc.exe qfailure packie` and then `sc.exe qfailureflag packie`.
   Expected: three `RESTART -- Delay = 5000 milliseconds` actions and
   `FAILURE_ACTIONS_ON_NONCRASH_FAILURES: TRUE`.
 - [ ] W5. Run `Get-EventLog -LogName Application -Source packie -Newest 1 | Format-List EventID,Message`.
-  Expected: `EventID 1`, `Positive ACK started`.
+  Expected: `EventID 1`, `OpenBGA Interface Engine started`.
 
 **Data protection (SEC-03, SEC-04)**
 
@@ -85,7 +85,7 @@ in any terminal opened **after** the installation. Then open **two** PowerShell 
 - [ ] W6. In **User** (not elevated), run `packie status`.
   Expected: `Node      Laboratory node (lab-node)`, `State     degraded` (no runtime
   configuration is applied yet), a `Store     ok, …` line and `Channels (0)`.
-- [ ] W7. Start **PACK-IE Console** from the Start menu as the same normal user.
+- [ ] W7. Start **OpenBGA Interface Engine Console** from the Start menu as the same normal user.
   Expected: it attaches without a prompt and the Dashboard shows the node "Laboratory node".
 - [ ] W8. From another computer on the network (optional), try to open `\\<this-pc>\pipe\packie-lab-node`,
   for example with the console's connection setting.
@@ -106,7 +106,7 @@ in any terminal opened **after** the installation. Then open **two** PowerShell 
   Expected: `packie: this needs administrator rights: run the terminal as administrator and try again`.
 - [ ] W12. In **Admin**, run `packie service stop`, then `packie service status`.
   Expected: `Service stopped…`, then `stopped`. Event log (W5 command, `-Newest 2`): an
-  `EventID 2` entry, `Positive ACK stopped`.
+  `EventID 2` entry, `OpenBGA Interface Engine stopped`.
 - [ ] W13. In **Admin**, run `packie service start`, then `packie service status` after 5 seconds.
   Expected: `running`.
 - [ ] W14. Restart Windows and do not sign in for a minute. Then sign in and, in **User**, run
@@ -118,11 +118,11 @@ in any terminal opened **after** the installation. Then open **two** PowerShell 
 - [ ] W15. Run the same installer again while the service runs.
   Expected: it finishes. Afterwards `packie service status` is `running` and
   `C:\ProgramData\Positive ACK\bootstrap.json` is unchanged.
-- [ ] W16. Uninstall "Positive ACK" in Settings → Apps.
+- [ ] W16. Uninstall "OpenBGA Interface Engine" in Settings → Apps.
   Expected: `sc.exe query packie` then says `The specified service does not exist as an installed service.`
   `C:\Program Files\Positive ACK` is gone and `C:\ProgramData\Positive ACK` (state, logs, bootstrap) is still there.
   In a new terminal, `where.exe packie` finds nothing and `$env:PACKIE_BOOTSTRAP` is empty.
-- [ ] W17. Uninstall "PACK-IE Console" separately in Settings → Apps.
+- [ ] W17. Uninstall "OpenBGA Interface Engine Console" separately in Settings → Apps.
   Expected: it is removed.
 
 ## Linux (Debian or Ubuntu with systemd)
@@ -226,7 +226,7 @@ the console from `console/`.
 These steps check the system daemon that the `.pkg` installs. A user agent (`service install
 --user`) is for evaluation under one account and is not covered here.
 
-- [ ] M1. Run `sudo installer -pkg packie-<version>-macos-<arch>.pkg -target /`.
+- [ ] M1. Run `sudo installer -pkg openbga-interface-engine-<version>-macos-<arch>.pkg -target /`.
   Expected: `installer: The install was successful.`
 - [ ] M2. Run `packie --bootstrap "/Library/Application Support/Positive ACK/bootstrap.json" service status`
   in a new terminal after signing out and in.
@@ -234,7 +234,7 @@ These steps check the system daemon that the `.pkg` installs. A user agent (`ser
   `Definition /Library/LaunchDaemons/org.openbga.positiveack.plist`.
 - [ ] M3. Run `dseditgroup -o checkmember packie`.
   Expected: `yes <you> is a member of packie`.
-- [ ] M4. Open **PACK-IE Console** from Applications.
+- [ ] M4. Open **OpenBGA Interface Engine Console** from Applications.
   Expected: it attaches to the node "Laboratory node".
 - [ ] M5. Run `sudo pkill -9 -f "packie run"`, wait 15 seconds, then repeat M2.
   Expected: `running` with a new PID.

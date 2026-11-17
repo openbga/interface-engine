@@ -1,6 +1,6 @@
 [package]
 name = "packie-engine"
-description = "Composition root of the Positive ACK engine: configuration, diagnostics, IPC and the channel registry"
+description = "Composition root of the Interface Engine: configuration, diagnostics, IPC and the channel registry"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

@@ -8,7 +8,7 @@ use crate::runner::Runner;
 /// The service (and unit, and launchd label stem) name.
 pub(crate) const SERVICE_NAME: &str = "packie";
 /// The name operators see in service managers.
-pub(crate) const DISPLAY_NAME: &str = "Positive ACK";
+pub(crate) const DISPLAY_NAME: &str = "OpenBGA Interface Engine";
 /// Time beyond the drain for closing the store and the IPC endpoint.
 pub(crate) const STOP_MARGIN_SECONDS: u32 = 30;
 /// The longest stop: the largest `shutdown_drain_seconds` (300) plus the margin.

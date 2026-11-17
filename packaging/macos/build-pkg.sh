@@ -1,11 +1,11 @@
 #!/bin/bash
-# Builds the macOS installer package: target/packaging/packie-<version>-macos-<arch>.pkg
+# Builds the macOS installer package: target/packaging/openbga-interface-engine-<version>-macos-<arch>.pkg
 #
 #   packaging/macos/build-pkg.sh [path/to/packie]
 #
 # Environment:
 #   PACKIE_BIN          the packie binary (default: target/release/packie, or the only target/<triple>/release/packie)
-#   PACKIE_CONSOLE_APP  the console "PACK-IE Console.app" (default: the Tauri bundle output under
+#   PACKIE_CONSOLE_APP  the console "OpenBGA Interface Engine Console.app" (default: the Tauri bundle output under
 #                    console/src-tauri/target[/<triple>]/release/bundle/macos); skipped when absent
 # Not signed or notarized.
 set -euo pipefail
@@ -111,7 +111,7 @@ host_archs=${arch//+/,}
 productbuild --synthesize "${products[@]}" "$work/distribution.xml" >/dev/null
 sed -i '' -E "s/hostArchitectures=\"[^\"]*\"/hostArchitectures=\"$host_archs\"/" "$work/distribution.xml"
 
-out="$OUT_DIR/packie-$VERSION-macos-$arch.pkg"
+out="$OUT_DIR/openbga-interface-engine-$VERSION-macos-$arch.pkg"
 rm -f "$out"
 productbuild --distribution "$work/distribution.xml" --package-path "$work" --version "$VERSION" "$out" >/dev/null
 rm -rf "$work"

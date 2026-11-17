@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "PACK-IE Console",
+  "productName": "OpenBGA Interface Engine Console",
   "version": "0.2.0",
   "identifier": "org.openbga.positiveack.console",
   "build": {
@@ -14,7 +14,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "PACK-IE Console",
+        "title": "OpenBGA Interface Engine Console",
         "width": 1280,
         "height": 800,
         "minWidth": 1024,
@@ -29,13 +29,13 @@
   "bundle": {
     "active": true,
     "createUpdaterArtifacts": false,
-    "publisher": "Positive ACK contributors",
+    "publisher": "OpenBGA contributors",
     "copyright": "Copyright (C) 2026 BGASoft Inc. and OpenBGA contributors",
     "license": "AGPL-3.0-only",
     "licenseFile": "../../LICENSE",
     "category": "Utility",
-    "shortDescription": "Console for the PACK-IE laboratory interface engine.",
-    "longDescription": "Desktop console that attaches to the Positive ACK engine on this computer to watch channels, messages and logs and to edit configuration.",
+    "shortDescription": "Console for the OpenBGA Interface Engine, a laboratory interface engine.",
+    "longDescription": "Desktop console that attaches to the Interface Engine on this computer to watch channels, messages and logs and to edit configuration.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

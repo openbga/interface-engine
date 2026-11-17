@@ -259,7 +259,10 @@ export function stubApi(overrides: Partial<Record<keyof EngineApi, unknown>> = {
       ],
     })),
     closeDelivery: vi.fn(async () => delivery("LIS", { state: "cancelled", closedReason: "x" })),
-    exportMessages: vi.fn(async () => ({ savedTo: "/home/lab/packie-messages.csv", rows: 3 })),
+    exportMessages: vi.fn(async () => ({
+      savedTo: "/home/lab/interface-engine-messages.csv",
+      rows: 3,
+    })),
     ...overrides,
   };
   // Every call is a spy, so a test that overrides one can still read its calls.

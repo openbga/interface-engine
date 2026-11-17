@@ -1,6 +1,6 @@
 [package]
 name = "packie-host"
-description = "Hosting of the Positive ACK engine as an OS service: Windows service, launchd, systemd"
+description = "Hosting of the Interface Engine as an OS service: Windows service, launchd, systemd"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

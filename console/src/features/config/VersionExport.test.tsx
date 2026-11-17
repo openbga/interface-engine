@@ -56,7 +56,7 @@ describe("VersionHistory: Export change report", () => {
     ).toEqual([1, 2, 3]);
     const [file] = vi.mocked(api.saveReportFile).mock.calls[0] ?? [];
     expect(file?.format).toBe("csv");
-    expect(file?.name).toMatch(/^packie-change-report-\d{4}-\d{2}-\d{2}\.csv$/);
+    expect(file?.name).toMatch(/^interface-engine-change-report-\d{4}-\d{2}-\d{2}\.csv$/);
     expect(file?.audit).toEqual({ kind: "change_report", rows: 3 });
     expect(file?.content).toContain("kind,version,applied_by");
     expect(file?.content).toContain("by LAB\\jdoe.");
@@ -76,7 +76,7 @@ describe("VersionHistory: Export change report", () => {
     expect(await screen.findByText("1 version saved to C:\\Reports\\change.csv.")).toBeTruthy();
     const [file] = vi.mocked(api.saveReportFile).mock.calls[0] ?? [];
     expect(file?.format).toBe("json");
-    expect(file?.name).toMatch(/^packie-change-report-v2-.*\.json$/);
+    expect(file?.name).toMatch(/^interface-engine-change-report-v2-.*\.json$/);
     const parsed = JSON.parse(file?.content ?? "");
     expect(parsed.versions.map((v: { version: number }) => v.version)).toEqual([2]);
     expect(parsed.versions[0].comparison.against).toBe(1);

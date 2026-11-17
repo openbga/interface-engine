@@ -79,17 +79,17 @@ describe("Settings > Backup > Restore", () => {
   it("needs no sudo in an administrator terminal on Windows, and quotes paths with spaces", async () => {
     await openBackup(
       restoreApi(
-        { bootstrapPath: "C:\\Program Data\\PACK-IE\\bootstrap.json" },
+        { bootstrapPath: "C:\\Program Data\\Interface Engine\\bootstrap.json" },
         "windows-x86_64",
-        status({ lastSuccess: success(2, "D:\\PACK-IE Backups\\packie-backup-1") }),
+        status({ lastSuccess: success(2, "D:\\Interface Engine Backups\\packie-backup-1") }),
       ),
     );
     const restore = await restoreRegion();
-    const boot = '"C:\\Program Data\\PACK-IE\\bootstrap.json"';
+    const boot = '"C:\\Program Data\\Interface Engine\\bootstrap.json"';
     expect(commandsIn(restore)).toEqual([
-      `packie --bootstrap ${boot} backup verify "D:\\PACK-IE Backups\\packie-backup-1"`,
+      `packie --bootstrap ${boot} backup verify "D:\\Interface Engine Backups\\packie-backup-1"`,
       `packie --bootstrap ${boot} service stop`,
-      `packie --bootstrap ${boot} backup restore "D:\\PACK-IE Backups\\packie-backup-1" --yes`,
+      `packie --bootstrap ${boot} backup restore "D:\\Interface Engine Backups\\packie-backup-1" --yes`,
       `packie --bootstrap ${boot} service start`,
     ]);
     expect(restore.textContent).toContain("PowerShell as administrator");

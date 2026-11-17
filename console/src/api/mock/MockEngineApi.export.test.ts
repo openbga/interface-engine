@@ -49,7 +49,7 @@ describe("exportMessages", () => {
     const expected = await matching(api, filter);
     expect(expected.length).toBeGreaterThan(3);
     const result = await api.exportMessages({ filter, format: "csv", includeBodies: false });
-    expect(result).toEqual({ savedTo: "packie-messages.csv", rows: expected.length });
+    expect(result).toEqual({ savedTo: "interface-engine-messages.csv", rows: expected.length });
     const lines = saved().text.trimEnd().split("\r\n");
     expect(lines[0]).toBe(HEADER);
     expect(lines.slice(1).map((line) => line.split(",")[0])).toEqual(expected.map((m) => m.id));
@@ -88,7 +88,7 @@ describe("exportMessages", () => {
     const api = create();
     const filter: MessageFilter = { states: ["routed"] };
     await api.exportMessages({ filter, format: "jsonl", includeBodies: false });
-    expect(saved().name).toBe("packie-messages.jsonl");
+    expect(saved().name).toBe("interface-engine-messages.jsonl");
     const first = JSON.parse(saved().text.split("\n")[0] ?? "{}");
     expect(Object.keys(first)).toEqual(HEADER.split(","));
     expect(Array.isArray(first.deliveries)).toBe(true);

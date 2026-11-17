@@ -101,6 +101,6 @@ UI change. Never include patient information, real laboratory exports or credent
 Contributions are accepted under [AGPL-3.0-only](LICENSE), the same license as the project;
 there is no CLA. Identify third-party material and preserve its notices.
 
-PACK-IE is developed with substantial AI assistance. Contributors are responsible for reviewing
+OpenBGA Interface Engine is developed with substantial AI assistance. Contributors are responsible for reviewing
 and verifying their changes, including AI-assisted work. As stated in the [README](README.md),
 the software is provided as is, without warranty, and is not clinically validated.

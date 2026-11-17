@@ -1,4 +1,4 @@
-# Cargo workspace for the Positive ACK engine.
+# Cargo workspace for the Interface Engine.
 # Every directory under crates/ is a member. Member crates reference shared
 # dependencies with `{ workspace = true }`; crate-local additions go in the
 # member's own Cargo.toml. The console's Tauri crate (console/src-tauri) is a

@@ -1,6 +1,6 @@
 # Operator guides
 
-Use these guides on the computer running Positive ACK. The console and CLI connect
+Use these guides on the computer running OpenBGA Interface Engine. The console and CLI connect
 locally to the same engine; closing the console leaves the engine running.
 
 | Guide | What it covers |

@@ -1,4 +1,4 @@
-//! Desktop shell for the PACK-IE Console: one Tauri window over the bundled UI.
+//! Desktop shell for the OpenBGA Interface Engine Console: one Tauri window over the bundled UI.
 //!
 //! The shell holds one connection to the engine (`docs/architecture.md` §1) and passes
 //! requests, subscriptions and connection changes through to the window; it keeps no engine

@@ -53,6 +53,11 @@ Notable changes are grouped by release and change type, following
 
 ### Changed
 
+- **Name:** the product is OpenBGA Interface Engine (repository `openbga/interface-engine`,
+  console OpenBGA Interface Engine Console). Alert e-mail subjects start `[Interface Engine <node>]`,
+  exports are named `interface-engine-*`, installers `openbga-interface-engine-<version>-*`. Install
+  folders, the `packie` command, service, group, variables and the Windows group `PACK-IE Operators`
+  keep their names (see [install](docs/operations/install.md)).
 - Resending a superseded revision is refused by default in both modes. The explicit
   `--superseded-ok` override is audited and remains separate from duplicate-risk confirmation.
 - Retention keeps an earlier revision while a retained revision references it.

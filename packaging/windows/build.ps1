@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Builds the Windows installer: target\packaging\packie-<version>-windows-x64-setup.exe
+  Builds the Windows installer: target\packaging\openbga-interface-engine-<version>-windows-x64-setup.exe
 
 .PARAMETER PackieBin
   packie.exe to package. Default: $env:PACKIE_BIN, else target\release\packie.exe, else the only
@@ -61,7 +61,7 @@ if (-not $makensis) { throw 'makensis not found on PATH; install NSIS 3 (https:/
 
 $outDir = Join-Path $root 'target\packaging'
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null
-$outFile = Join-Path $outDir "packie-$version-windows-x64-setup.exe"
+$outFile = Join-Path $outDir "openbga-interface-engine-$version-windows-x64-setup.exe"
 
 $defines = @("/DVERSION=$version", "/DPACKIE_EXE=$PackieBin", "/DOUTFILE=$outFile")
 if ($ConsoleInstaller) {

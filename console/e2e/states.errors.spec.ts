@@ -48,7 +48,7 @@ test.describe("H-08 error: every data page says why it failed and offers Try aga
     }) => {
       await visit(page, app.route, { scenario: "errors" });
       await expect(page.getByRole("alert").first()).toBeVisible();
-      await expect(page.getByRole("banner")).toContainText("PACK-IE Console");
+      await expect(page.getByRole("banner")).toContainText("OpenBGA Interface Engine Console");
       await expect(page.getByRole("navigation", { name: "Main" })).toBeVisible();
       await helpButton(page).click();
       await expect(

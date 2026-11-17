@@ -138,7 +138,7 @@ test("a failed backup shows the engine's words, retries, and is in the status as
 });
 
 /** The mock engine's reported bootstrap file (src/api/mock/settings.ts). */
-const BOOTSTRAP = "C:\\ProgramData\\PACK-IE\\bootstrap.json";
+const BOOTSTRAP = "C:\\ProgramData\\InterfaceEngine\\bootstrap.json";
 
 test("BR-01: restore is shown as commands for the engine's own bootstrap file, never as a button", async ({
   page,

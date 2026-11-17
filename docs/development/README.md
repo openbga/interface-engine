@@ -1,4 +1,4 @@
-# Developing PACK-IE
+# Developing OpenBGA Interface Engine
 
 Start with [architecture](../architecture.md), [requirements](../requirements.md) and the
 relevant [behavior specification](../spec/). [Decisions](../decisions.md) records design
@@ -126,7 +126,7 @@ run console typecheck and affected tests.
 is the release branch: it receives `develop` by pull request, and releases are cut from it.
 CI and the scenario suite run on every pull request and on every push to either branch.
 
-The [presentation website](https://openbga.github.io/pack-ie/) is the static content of
+The [presentation website](https://openbga.github.io/interface-engine/) is the static content of
 `website/`, with no build step. [pages.yml](../../.github/workflows/pages.yml) publishes it
 with GitHub Pages when `website/` changes on `main`, or when run by hand, so a change made on
 `develop` goes live when it reaches `main`. Preview it with

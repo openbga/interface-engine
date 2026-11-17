@@ -148,8 +148,8 @@ jobs:
             ~/.cargo/registry/cache
             ~/.cargo/git/db
             console/src-tauri/target
-          key: cargo-tauri-ubuntu-${{ hashFiles('console/src-tauri/Cargo.lock', 'rust-toolchain.toml') }}
-          restore-keys: cargo-tauri-ubuntu-
+          key: cargo-tauri-ubuntu-v2-${{ hashFiles('console/src-tauri/Cargo.lock', 'rust-toolchain.toml') }}
+          restore-keys: cargo-tauri-ubuntu-v2-
       # A debug build reads the dev URL and does not need console/dist, so the frontend is not built.
       - name: Check
         working-directory: console/src-tauri

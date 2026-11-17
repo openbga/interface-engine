@@ -214,7 +214,7 @@ test("CR-01 Export change report (CSV) is one sheet with every version, its outc
   await open(page, "/settings/versions");
   await expect(versionRow(page, 47)).toBeVisible();
   const { text, name } = await exportReport(page);
-  expect(name).toMatch(/^packie-change-report-\d{4}-\d{2}-\d{2}\.csv$/);
+  expect(name).toMatch(/^interface-engine-change-report-\d{4}-\d{2}-\d{2}\.csv$/);
   await expect(page.getByText("Change report saved")).toBeVisible();
   await expect(page.getByText(`13 versions saved to ${name}.`)).toBeVisible();
 
@@ -304,7 +304,7 @@ test("CR-02 the JSON report holds the same facts, nested by version, and can be 
   await open(page, "/settings/versions?version=44");
   await expect(page.getByRole("region", { name: "Version 44" })).toBeVisible();
   const { text, name } = await exportReport(page, { format: "JSON", scope: "Version 44 only" });
-  expect(name).toMatch(/^packie-change-report-v44-\d{4}-\d{2}-\d{2}\.json$/);
+  expect(name).toMatch(/^interface-engine-change-report-v44-\d{4}-\d{2}-\d{2}\.json$/);
   await expect(page.getByText(`1 version saved to ${name}.`)).toBeVisible();
   const report = JSON.parse(text);
   expect(report.generated_by).toBe(ME);
@@ -456,5 +456,5 @@ test("CR-08 with the audit log unavailable the export is refused and nothing is 
   // Once the log can be written the export goes through.
   await mockHandle(page, (mock) => mock.setAuditAvailable(true));
   const file = await downloadFrom(page, dialog.getByRole("button", { name: "Export" }));
-  expect(file.suggestedFilename()).toMatch(/^packie-change-report-/);
+  expect(file.suggestedFilename()).toMatch(/^interface-engine-change-report-/);
 });

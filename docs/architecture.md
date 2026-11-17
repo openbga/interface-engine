@@ -1,6 +1,6 @@
 # Architecture
 
-How Positive ACK is built. Behavior details per area live in `docs/spec/`.
+How OpenBGA Interface Engine is built. Behavior details per area live in `docs/spec/`.
 
 ## 1. Process model
 
@@ -15,7 +15,7 @@ How Positive ACK is built. Behavior details per area live in `docs/spec/`.
 │         diagnostics: snapshots · alerts · log ring · tracing files        │
 └──────────────────────────────────────────────────────────────────────────┘
         ▲ serial/TCP/files to instruments, LIS, EHR        │
-                                        PACK-IE Console (Tauri) ┘  packie CLI ┘
+                                        OpenBGA Interface Engine Console (Tauri) ┘  packie CLI ┘
 ```
 
 - **`packie-engine`** is a library: it loads configuration, starts diagnostics, audit, backup
@@ -36,7 +36,7 @@ How Positive ACK is built. Behavior details per area live in `docs/spec/`.
   `~/Library/LaunchAgents` for development and evaluation. Linux: systemd unit
   `/etc/systemd/system/packie.service` running as the `packie` user and group, with `dialout` as a
   supplementary group for serial ports when that group exists, `Restart=on-failure`, and a read-only system apart
-  from the state and log directories. Windows: service `packie` ("Positive ACK"), automatic
+  from the state and log directories. Windows: service `packie` ("OpenBGA Interface Engine"), automatic
   start, LocalSystem, restart on failure, Application event-log entries on start and stop;
   install makes the state and log directories private to SYSTEM and Administrators
   (`icacls`, inheritance from `C:\ProgramData` removed). Unix state and log directories allow
@@ -48,7 +48,7 @@ How Positive ACK is built. Behavior details per area live in `docs/spec/`.
   `<state>/packie.lock` is held while it runs and `<state>/packie.instance.json` records pid,
   start time and bootstrap for `packie service status`. Installing as a system service needs
   sudo or an administrator terminal.
-- **PACK-IE Console** is a Tauri 2 desktop app. It attaches to the engine over IPC. If no engine is
+- **OpenBGA Interface Engine Console** is a Tauri 2 desktop app. It attaches to the engine over IPC. If no engine is
   running it says so and offers to start the installed service. The desktop shell maintains
   an IPC connection and reconnects when it is lost.
 - **IPC**: Unix domain socket at `<state>/packie.sock`, Windows named pipe `\\.\pipe\packie-<node>`.

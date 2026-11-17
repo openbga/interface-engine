@@ -51,7 +51,7 @@ pub struct Document {
     /// The records in row order.
     pub records: Vec<Record>,
 }
-/// Transformation access independent of any internal PACK-IE crate.
+/// Transformation access independent of any internal engine crate.
 pub trait RecordModel {
     /// The text at `path` (`col.<name>` or zero-based `col[<index>]`), if the path exists.
     fn get(&self, path: &str) -> Option<&str>;

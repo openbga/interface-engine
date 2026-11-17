@@ -4,7 +4,7 @@
 
 [package]
 name = "packie-console"
-description = "Tauri 2 desktop shell for the PACK-IE Console: window, capabilities and thin command adapters"
+description = "Tauri 2 desktop shell for the OpenBGA Interface Engine Console: window, capabilities and thin command adapters"
 version = "0.2.0"
 edition = "2024"
 rust-version = "1.97"

@@ -293,7 +293,7 @@ describe("TransmissionPage export", () => {
     await user.click(within(dialog).getByRole("button", { name: "Export CSV" }));
     await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
     const file = save.mock.calls[0]?.[0];
-    expect(file?.name).toBe("packie-transmission-ch-msg-sta-2026-11-07.csv");
+    expect(file?.name).toBe("interface-engine-transmission-ch-msg-sta-2026-11-07.csv");
     expect(file?.format).toBe("csv");
     const lines = file?.content.split("\r\n").slice(0, -1) ?? [];
     expect(lines).toHaveLength(5);

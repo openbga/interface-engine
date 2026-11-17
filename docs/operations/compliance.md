@@ -14,7 +14,7 @@ following it. Transmission reports and message export are available in the conso
 
 ## 1. Intended use and responsibilities
 
-PACK-IE runs on one laboratory-controlled computer. It transfers, stores, converts formats and
+The engine runs on one laboratory-controlled computer. It transfers, stores, converts formats and
 displays laboratory data and applies the formulas the laboratory defines. It has no built-in
 interpretation, abnormal flags or autoverification and does not decide whether to release a
 result. Operational alerts concern
@@ -38,14 +38,14 @@ configuration and carries the laboratory's responsibility. Operator-defined arit
 module for clinical use" (Class I, exempt from premarket notification subject to §862.9);
 this guide draws no classification conclusion for it. [[F5]][F5]
 
-The laboratory is the HIPAA covered entity and CLIA certificate holder. Installing PACK-IE does
+The laboratory is the HIPAA covered entity and CLIA certificate holder. Installing the engine does
 not establish compliance. The lab owns risk analysis, workforce training, access approval,
 physical security, interface validation, director approval, retention, downtime procedures
 and breach assessment. The project has no access to the lab's ePHI in this local deployment;
 the project's conclusion that it is not a business associate depends on that condition
 (**interpretation**). Arrangements with the lab's support providers are the lab's responsibility.
 
-Outside PACK-IE, and the laboratory's to provide:
+Outside the engine, and the laboratory's to provide:
 
 - HIPAA risk analysis and management, workforce training and sanctions, and business associate
   agreements with its own vendors. [[H3]][H3]
@@ -56,13 +56,13 @@ Outside PACK-IE, and the laboratory's to provide:
 - Network segmentation, VPNs and firewalls, and the documented decision whether plaintext
   MLLP is acceptable on its network. [[H1]][H1]
 - Interface validation: test plans, choosing samples, comparing with the LIS or EHR, director
-  approval and the frequency of re-verification. PACK-IE supplies evidence and a sign-off
+  approval and the frequency of re-verification. The engine supplies evidence and a sign-off
   record, not the validation. [[C2]][C2]
 - Retention periods, legal holds, the frequency of audit-log review, breach assessment and
   notification, patient access requests, public-health reporting, state-law analysis,
   accreditation inspections, the procedure manual and physical security of the computer.
 
-PACK-IE has no application login, roles beyond OS groups, remote management service, SIEM or
+The engine has no application login, roles beyond OS groups, remote management service, SIEM or
 cloud audit forwarding, or database encryption, and it makes no FDA submission. It is not
 ONC-certified and claims no HL7 implementation-guide conformance beyond the behavior tested
 by its [conformance corpus and scenarios](../testing.md). Validate the partner's actual profile
@@ -71,21 +71,21 @@ and reporting requirements for each connection.
 ## 2. HIPAA Security Rule crosswalk
 
 The Security Rule binds covered entities and business associates, not software. This table
-covers the specifications that bear on a PACK-IE installation, and says what the product
+covers the specifications that bear on an engine installation, and says what the product
 contributes toward each and what the laboratory must still do. **R** means required; **A** means addressable; **standard** means a safeguard standard.
 Addressable does not mean optional: assess whether the measure is reasonable and appropriate;
 if it is not, document why and an equivalent measure where reasonable. [[H2]][H2]
 
-| Safeguard and specification | What PACK-IE provides | What the laboratory must do |
+| Safeguard and specification | What the engine provides | What the laboratory must do |
 | --- | --- | --- |
 | Access control, §164.312(a)(1), standard [[H1]][H1] | Management is local only. `ipc.group` restricts access to designated accounts: default Unix group `packie`, Windows local group `PACK-IE Operators`, plus service/administrator access. | Approve and review group membership; remove access when staff leave. Check actual access using [installation](install.md#ipc-access-and-opening-the-console). |
 | Unique user identification, §164.312(a)(2)(i), R [[H1]][H1] [[H20]][H20] | The engine obtains the account name and uid/SID from the IPC peer's OS identity. Audit records attribute actions to that account; `origin` identifies the client type. | Give each person an individual OS account. Shared bench accounts defeat attribution. |
 | Emergency access procedure, §164.312(a)(2)(ii), R [[H1]][H1] | An authorized administrator can use the local CLI and restore a verified backup while the engine is stopped. Store and configuration locations are known. | Write and test administrator access, backup restoration and emergency data retrieval procedures. Keep recovery credentials available to authorized staff during an outage. |
 | Automatic logoff, §164.312(a)(2)(iii), A [[H1]][H1] | The OS session is the primary control. The console also hides message content, parsed fields and audit details after an idle timeout (Settings → Privacy, default 15 minutes; a setting of that console, not a login). It does not lock the computer. | Set OS screen-lock policy, protect unattended displays and clear content/close views after use. Document the chosen measure. |
-| Encryption at rest, §164.312(a)(2)(iv), A [[H1]][H1] | Store files are access-restricted but not encrypted by PACK-IE. | Enable full-disk encryption (BitLocker, FileVault or LUKS), protect recovery keys, and encrypt backup and export targets. Document the assessment. |
+| Encryption at rest, §164.312(a)(2)(iv), A [[H1]][H1] | Store files are access-restricted but not encrypted by the engine. | Enable full-disk encryption (BitLocker, FileVault or LUKS), protect recovery keys, and encrypt backup and export targets. Document the assessment. |
 | Audit controls, §164.312(b), standard [[H1]][H1] [[H20]][H20] | A separate append-only, hash-chained audit log records account, time, action, object and outcome, including body/parsed-field views, identifier/text searches and audit exports. Audited commands/content views are refused if their initial audit event cannot be written; message traffic continues. | Protect audit copies, verify the chain against preserved anchors and review failures. Host administrators remain inside the trust boundary. |
 | Information system activity review, §164.308(a)(1)(ii)(D), R [[H3]][H3] | `packie audit list`, `export` and `verify` support review and preservation. Audit records are separate from rotating diagnostic logs. | Name a reviewer and a review cadence based on risk; record the review, findings, escalation and resolution. Review OS activity too. |
-| Log-in monitoring, §164.308(a)(5)(ii)(C), A [[H3]][H3] | There is no PACK-IE login. Audit records identify accounts for management actions and record access refusals where identity is available. | Enable OS logon auditing, review failed/unusual logons and membership changes, and set password/MFA policy at the OS or organization level. |
+| Log-in monitoring, §164.308(a)(5)(ii)(C), A [[H3]][H3] | There is no engine login. Audit records identify accounts for management actions and record access refusals where identity is available. | Enable OS logon auditing, review failed/unusual logons and membership changes, and set password/MFA policy at the OS or organization level. |
 | Integrity, §164.312(c)(1), standard; authentication of ePHI, §164.312(c)(2), A [[H1]][H1] | Original and transformed bytes have SHA-256 hashes; stored bodies are checked when read. Receipt precedes positive data ACK. Audit verification checks hashes, sequence continuity and links across retained files. | Validate mappings against source and final reports; preserve hashes with evidence and investigate mismatches. A hash alone does not establish clinical correctness or prove the receiving system's contents. |
 | Person or entity authentication, §164.312(d), standard [[H1]][H1] | The OS authenticates the login; the engine reads the IPC peer's OS identity rather than trusting a supplied account name. OS-login sufficiency is the project's **interpretation**; no HHS text was found either way. | Use individual accounts and controlled access; assess whether the OS controls meet the lab's authentication needs. Do not treat a client label as verified identity. |
 | Transmission security, §164.312(e)(1), standard; integrity controls and encryption, §164.312(e)(2)(i)–(ii), A/A [[H1]][H1] | TCP/MLLP are plaintext; no TLS is provided. Listeners use configured bind addresses and peer allowlists. SFTP encrypts transport and pins the server key. | Document the network risk and chosen controls: segmentation, firewalls, allowlists and, where needed, a VPN. Protect folder shares and verify destination identity; SFTP does not encrypt remote files at rest. |
@@ -135,7 +135,7 @@ this guide does not assert current CAP item numbers or a mandatory biennial inte
    test state and synthetic peers; they do not validate the real instrument-to-LIS interface.
    Never enable `test_hooks` on the production node.
 3. Run the lab's end-to-end cases through each actual interface and compare the instrument
-   record, PACK-IE original/transformed content and final LIS/EHR report. Check report dates,
+   record, the engine's original/transformed content and final LIS/EHR report. Check report dates,
    corrections and retrieval as well as successful delivery. An ACK is evidence of the
    recorded acknowledgement level, not proof of the final report's correctness.
 4. Save the active configuration version and every affected channel's apply outcome.
@@ -173,7 +173,7 @@ Use [verified backups](install.md#backup-and-restore) when preserving the comple
 
 A stored-byte hash does not prove clinical correctness, and a missing transformed hash does
 not prove that nothing was sent. An ACK proves only its recorded level. Compare the source,
-PACK-IE original/transformed data and the actual final LIS/EHR report; include corrections and
+The engine's original/transformed data and the actual final LIS/EHR report; include corrections and
 report dates. See [report/export limits](running-and-monitoring.md#transmission-reports-and-message-export).
 
 Use this suggested record for initial validation, changes and recovery tests:
@@ -194,7 +194,7 @@ Use this suggested record for initial validation, changes and recovery tests:
 | Evidence location, access owner, retention and next review trigger/cadence | |
 
 Keep original and corrected reports linked in the lab's records and avoid reissuing a
-superseded result. PACK-IE records `revision_of` when source identity matches but content changes;
+superseded result. The engine records `revision_of` when source identity matches but content changes;
 that is not a clinical correction review. Both resend modes refuse an older revision with
 `superseded` when a newer revision exists. Inspect that newer record and the destination's
 current report first. Only an approved decision to send older content warrants
@@ -219,12 +219,12 @@ owners and backup destinations in the lab's asset inventory.
 | `<state>/audit/audit.sqlite3`, SQLite sidecars and sealed `audit-<year>-<first seq, 12 digits>.sqlite3` files | Persistent audit records: account, action, target, time, outcome and potentially PHI in searches/notes/reasons; never message bodies. Separate from diagnostic logs. | Audit directory `0700`, current file `0600`, sealed files `0400` (read-only on Windows). Protect all audit files and exports as PHI. Retain preserved anchors separately. |
 | `runtime.file` (default `<state>/runtime.json`), `<state>/config/runtime.vNNNNNNNNNN.json` and corresponding `.meta.json` records (legacy `.note` files); bootstrap | Persistent configuration/history. Not a message archive, but labels, paths, constants, code tables and free-text notes can carry sensitive data if entered there. | Keep configuration files private; avoid patient data in IDs, labels, paths, notes and mapping constants. Keep external approvals and comparisons with version records; check any configured pruning policy. |
 | Folder endpoint `settings.path`, its `processed_directory` (default `processed`), destination and temporary files | PHI in incoming, processed, retained source and output files. `on_consumed` may move, delete or leave a source file after receipt. These copies are outside message-store retention. | Restrict local/share ACLs to the service and intended partners; inventory mapped shares and their backups. Verify service-account access and arrange independent cleanup/retention. |
-| SFTP endpoint `host` / `remote_directory`, processed directory and partner output files | PHI on the remote host, including processed and temporary files. SFTP protects the transfer, not remote storage or backups. | Record remote owner, account permissions, encryption, retention and disposal arrangements. PACK-IE does not control the remote host's media. |
+| SFTP endpoint `host` / `remote_directory`, processed directory and partner output files | PHI on the remote host, including processed and temporary files. SFTP protects the transfer, not remote storage or backups. | Record remote owner, account permissions, encryption, retention and disposal arrangements. The engine does not control the remote host's media. |
 | `backup.directory/packie-backup-<UTC time>/`, explicitly chosen backup directories, snapshots and off-site copies | PHI in store, spilled bodies, audit and configuration copies. Includes `manifest.json`, reference bootstrap and secret names, never secret values. `<state>/backup/status.json` records attempts and success. | Backup directories are created `0700`, writable files `0600`; sealed audit copies remain read-only. Restrict target ACLs, encrypt each volume and record custodian, transfers, retention and restore tests. Endpoint files and diagnostic logs need separate preservation. |
 | `<state>/pre-restore-<UTC time>/` | Previous store, bodies, audit, configuration history and runtime document moved/copied aside during restore. Persistent PHI until an operator removes it. | Keep access private and include it in disk-capacity, hold and disposal decisions. Scheduled backup cleanup does not remove it. |
-| Lab-chosen evidence/export folders, redirected CLI output, clipboard, screenshots and support material | PHI may be copied from message metadata, bodies, parsed fields or transcripts. Message export optionally includes original content; transmission reports contain identifiers, hashes and ACK evidence; audit export includes operator details. | Choose a restricted destination and safe transfer method; track recipients and copies. Protect terminal/shell history and clipboard history. PACK-IE retention does not remove these copies. |
+| Lab-chosen evidence/export folders, redirected CLI output, clipboard, screenshots and support material | PHI may be copied from message metadata, bodies, parsed fields or transcripts. Message export optionally includes original content; transmission reports contain identifiers, hashes and ACK evidence; audit export includes operator details. | Choose a restricted destination and safe transfer method; track recipients and copies. Protect terminal/shell history and clipboard history. The engine's retention does not remove these copies. |
 
-The [diagnostics exclusions](../spec/diagnostics.md#8-what-never-appears) define what PACK-IE keeps
+The [diagnostics exclusions](../spec/diagnostics.md#8-what-never-appears) define what the engine keeps
 out of logs, snapshots, alerts and errors. Do not infer that the absence of payloads makes
 all host records anonymous. Secrets live in the service account's OS key store or configured
 restricted secrets file; preserve/recover them separately and never include them in support
@@ -239,8 +239,8 @@ confirm applicability before relying on an encryption safe harbor in a breach as
 
 ## 5. Retention and purge
 
-Choose retention by data role and applicable policy. PACK-IE is usually an interface evidence
-store; the LIS/EHR holds the report of record. A short PACK-IE retention period is appropriate
+Choose retention by data role and applicable policy. The engine is usually an interface evidence
+store; the LIS/EHR holds the report of record. A short engine retention period is appropriate
 only if the lab retains required reports and evidence elsewhere and can retrieve them.
 CLIA does not name interface logs as a distinct record category. Keeping delivery evidence
 as long as the report it supports is the project's **interpretation**. [[C2]][C2]
@@ -248,8 +248,8 @@ as long as the report it supports is the project's **interpretation**. [[C2]][C2
 | Record/policy example | Setting or action | Limit to account for |
 | --- | --- | --- |
 | Short operational history | Per-channel `retention.max_age_days` defaults to `90`; range 1–36,500, or `null` for no age limit. | Ninety days is a product default, not a regulatory period. |
-| CLIA test reports, QC/analytic-systems records and original/transcribed copies: typically at least 2 years [[C2]][C2] | If PACK-IE evidence must cover that period, choose an age limit covering the full calendar interval, e.g. 731 days for two years, and retain required records in the lab archive. | Age is measured from receipt, not necessarily reporting. Allow for reporting delay; a count cap can purge earlier. |
-| CLIA pathology reports: at least 10 years [[C2]][C2] | Where applicable to the evidence held here, use a sufficient day count, e.g. 3653 for ten calendar years, with allowance for reporting delay, or archive under the report policy. | PACK-IE does not replace the laboratory report archive. |
+| CLIA test reports, QC/analytic-systems records and original/transcribed copies: typically at least 2 years [[C2]][C2] | If evidence held by the engine must cover that period, choose an age limit covering the full calendar interval, e.g. 731 days for two years, and retain required records in the lab archive. | Age is measured from receipt, not necessarily reporting. Allow for reporting delay; a count cap can purge earlier. |
+| CLIA pathology reports: at least 10 years [[C2]][C2] | Where applicable to the evidence held here, use a sufficient day count, e.g. 3653 for ten calendar years, with allowance for reporting delay, or archive under the report policy. | The engine does not replace the laboratory report archive. |
 | HIPAA required policies/action documentation: 6 years [[H5]][H5] | Keep lab policies, reviews and action records for the applicable six-year interval. `audit.retention_days` defaults to `2190`, range 365–36,500; set it at least as long as the longest message retention and the full applicable calendar interval. | Raw audit-log retention for six years is an **interpretation**. A fixed 2190-day default can be shorter than six calendar years across leap days. Sealed audit files are purged whole only after their newest event ages out; the current file is kept. Each removal is audited. |
 | Configuration/validation history | `runtime.versions_kept` defaults to `null` (all versions); a positive count permits pruning only of versions older than `audit.retention_days`. Keep tests and director approvals in the lab archive. | A version count is not a time guarantee. The 2016 CAP checklist calls for testing records through system life plus two years (**secondary for current requirements**); confirm the current checklist. [[C4]][C4] |
 | Backup copies in the scheduled root | After a scheduled backup, `backup.schedule.keep` retains the newest 1–365 complete `packie-backup-*` directories (default 7), including manually created backups with that naming. | This count is separate from message/audit retention and off-site policy; pre-restore state and other directory names are not removed. |
@@ -278,7 +278,7 @@ Preserve a restricted copy of relevant evidence before rotation, purge or config
 pruning. Record the incident window with time zone, node/version, affected channels,
 accounts and hosts, and who collected each copy. Keep originals and work from copies.
 
-| Question | Evidence PACK-IE can provide | What remains with the laboratory |
+| Question | Evidence the engine can provide | What remains with the laboratory |
 | --- | --- | --- |
 | What was received, transformed and sent? | Messages, original/transformed hashes and requested bodies, receipt/configuration/mapping versions, destinations, attempts, ACK codes/levels/times and delivery states. | Compare instrument and destination records. An acknowledged delivery does not prove a person read a report. |
 | What changed or was restarted? | Attributed configuration versions, required notes and sign-offs; audit events for configuration/channel actions, resend/close, backup/restore and service lifecycle; diagnostic reconciliation counts. | Preserve versions, audit and OS/lab change records, including per-channel apply output. The audit's overall action outcome does not prove every channel applied successfully. |
@@ -300,23 +300,23 @@ See [audit review and integrity limits](../spec/audit.md).
 
 The HIPAA breach assessment includes whether PHI was actually acquired or viewed. The lab
 performs that assessment and determines notification duties, including applicable deadlines;
-PACK-IE does not decide whether an event is a reportable breach. [[H6]][H6] Review exported
+The engine does not decide whether an event is a reportable breach. [[H6]][H6] Review exported
 material for PHI before sharing it; follow [support collection guidance](troubleshooting.md#collect-support-information-without-patient-data).
 
 ## 7. Downtime and restart reconciliation
 
-Closing the console leaves the engine running. If the engine or computer stops, PACK-IE cannot
+Closing the console leaves the engine running. If the engine or computer stops, the engine cannot
 receive, acknowledge or forward new traffic. Instruments and sending systems may retain and
 retransmit under their own retry rules; verify retry limits, queue capacity and recovery
-steps with each vendor. PACK-IE cannot guarantee recovery of data a sender discards.
+steps with each vendor. The engine cannot guarantee recovery of data a sender discards.
 
 | Channel/protocol | During interruption | At recovery |
 | --- | --- | --- |
-| Bridge | Connections end; buffers are memory only. A crash loses buffered bytes; bounded orderly shutdown can leave undrained bytes. PACK-IE does not originate protocol ACKs for a bridge. | Reconnects from configuration; no durable bridge queue is replayed. A recording tap is observational evidence, not a delivery queue. Reconcile at both peers. |
+| Bridge | Connections end; buffers are memory only. A crash loses buffered bytes; bounded orderly shutdown can leave undrained bytes. The engine does not originate protocol ACKs for a bridge. | Reconnects from configuration; no durable bridge queue is replayed. A recording tap is observational evidence, not a delivery queue. Reconcile at both peers. |
 | ASTM message source | Each accepted data frame is committed before its frame ACK. ENQ ACK is session negotiation, not proof a result was stored. A failed commit withholds the data ACK. | Sender may retransmit. Startup recovers complete valid committed transfers where possible; incomplete transfers become Aborted. Check them against the instrument's pending/results list. |
-| HL7 message source | Original-mode positive ACK follows commit and syntax acceptance. Enhanced `CA` proves PACK-IE commit; application `AA` proves engine acceptance, not downstream delivery. On storage failure no positive storage ACK is sent. | Sender retries according to its ACK settings. PACK-IE processes stored unfinished messages and continues queued deliveries. Validate the sender's duplicate handling. |
-| Durable message deliveries | Committed messages remain on disk. A destination may have received an in-flight message even if PACK-IE never recorded its ACK. | Reconciliation makes interrupted Sending deliveries `outcome_unknown`, keeps queued work in receipt order and restores paused flags. It does not query the LIS to resolve unknown outcomes. |
-| Folder/SFTP source | Uncommitted files are not consumed by PACK-IE; a whole computer/share outage may prevent access. | Polling/watch resumes. Check input, processed and output folders and partner records; do not assume file handoff proves LIS import. |
+| HL7 message source | Original-mode positive ACK follows commit and syntax acceptance. Enhanced `CA` proves the engine's commit; application `AA` proves engine acceptance, not downstream delivery. On storage failure no positive storage ACK is sent. | Sender retries according to its ACK settings. The engine processes stored unfinished messages and continues queued deliveries. Validate the sender's duplicate handling. |
+| Durable message deliveries | Committed messages remain on disk. A destination may have received an in-flight message even if the engine never recorded its ACK. | Reconciliation makes interrupted Sending deliveries `outcome_unknown`, keeps queued work in receipt order and restores paused flags. It does not query the LIS to resolve unknown outcomes. |
+| Folder/SFTP source | Uncommitted files are not consumed by the engine; a whole computer/share outage may prevent access. | Polling/watch resumes. Check input, processed and output folders and partner records; do not assume file handoff proves LIS import. |
 
 At startup, reconciliation runs before message sources open and emits
 `reconciliation.completed` with recovered, aborted, requeued and unknown counts. Inspect
@@ -333,7 +333,7 @@ Adapt this procedure and assign named owners before go-live:
 | Detect and notify | Who watches Dashboard/Alerts, at what interval, and whom to call for `endpoint_down`, `message_store_unavailable`, `disk_low`, `delivery_backlog`, `delivery_needs_attention`, `invalid_messages`, `audit_unavailable`, `backup_stale` and `notifications_failing`. Configure/test operational notification routes and define an independent outage check: a stopped computer cannot send notifications. Process clinical/urgent-result notifications through the lab's own procedure. |
 | Continue laboratory work | Instrument queue limits, manual/alternate result reporting, urgent-result communication, identification of affected specimens and control of later duplicate entry. CLIA requires a course of action for inoperable systems; current accreditation details need confirmation. [[C2]][C2] [[C4]][C4] |
 | Recover safely | Authorized administrator, power/network/storage checks, the tested restore method, recovery secrets and escalation contacts. Start the correct service; confirm version, configuration, store and channel states. |
-| Reconcile | Compare instrument pending/results lists, PACK-IE receipt/delivery records and final LIS/EHR reports across the outage window. Investigate missing, aborted, rejected and unknown outcomes. Check the destination before resending timed-out/unknown deliveries; close only with a verified reason. |
+| Reconcile | Compare instrument pending/results lists, the engine's receipt/delivery records and final LIS/EHR reports across the outage window. Investigate missing, aborted, rejected and unknown outcomes. Check the destination before resending timed-out/unknown deliveries; close only with a verified reason. |
 | Release and document | Verify queues drain, perform source-to-final-report checks and record gaps, duplicates, corrections and approval to resume routine operation. Use the validation record above and complete transmission reports for the outage period; preserve restricted message exports where needed. |
 
 ## 8. Go-live checklist
