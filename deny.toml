@@ -16,6 +16,9 @@ ignore = [
   { id = "RUSTSEC-2026-0370", reason = "zvariant: via zbus 5 <- secret-service <- keyring (Linux key store); no zbus release without it" },
   { id = "RUSTSEC-2026-0371", reason = "zbus_names: via zbus 5 <- secret-service <- keyring (Linux key store); no zbus release without it" },
   { id = "RUSTSEC-2026-0372", reason = "zvariant_derive: via zbus 5 <- secret-service <- keyring (Linux key store); no zbus release without it" },
+  # russh-sftp 3.0.1 and russh-util 0.52.0 (under russh 0.65), the latest releases, still
+  # depend on chrono; the workspace does not use it directly.
+  { id = "RUSTSEC-2026-0543", reason = "chrono: via russh-sftp and russh-util (SFTP endpoints); no release of either without it" },
   # Console graph only: gtk-rs 0.18 (Tauri 2's Linux webview stack) uses this proc macro at
   # build time; Tauri has not moved to newer gtk-rs.
   { id = "RUSTSEC-2024-0370", reason = "proc-macro-error: build-time macro of gtk-rs 0.18 under Tauri 2 on Linux (console graph only)" },
