@@ -342,6 +342,8 @@ async fn a_down_destination_queues_without_spending_attempts() {
     let mut instrument = source(&rig).await;
     instrument.send(&oru("CTRL-11")).await;
     assert_eq!(instrument.msa().await.0, "AA", "the source keeps receiving");
+    // The acknowledgement follows the commit; the pipeline creates the delivery after it.
+    rig.deliveries_until("routed", |d| !d.is_empty()).await;
     tokio::time::sleep(Duration::from_millis(300)).await;
     let deliveries = rig.deliveries();
     assert_eq!(deliveries[0].state, DeliveryState::Queued);
