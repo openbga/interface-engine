@@ -295,8 +295,9 @@ independently of the request that started it until stopped.
   the same enabled channel.
 - Unchanged channels are not restarted ([configuration.md](configuration.md#10-versioning-and-apply)).
 - Bridge label and tag changes apply in place. Endpoint changes and other bridge settings
-  replace the instance. `config_version` in its snapshot remains the version that started
-  the instance, including after an in-place update.
+  replace the instance. `config_version` in its snapshot is the version of the definition
+  in effect: the version that started the instance, then the version of its last in-place
+  update. Tap observations carry the same version.
 - **Break-before-make** for a changed channel that holds an exclusive resource (a
   `tcp_listener` port or a serial port): the old instance stops with `replaced_by_config`,
   which releases the resource, and then the new instance starts and binds it. Starting the new

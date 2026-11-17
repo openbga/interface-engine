@@ -134,7 +134,7 @@
         ]
       } },
     { "do": "assert_alert", "actor": "engine", "code": "config_rejected", "present": false },
-    { "do": "assert_snapshot", "actor": "engine", "target": { "channel": "bridge-x" }, "expect": { "label": "Bridge X renamed", "state": "running" } },
+    { "do": "assert_snapshot", "actor": "engine", "target": { "channel": "bridge-x" }, "expect": { "label": "Bridge X renamed", "state": "running", "config_version": 3 } },
     { "do": "expect_open", "actor": "inst1", "for_ms": 300 },
     { "do": "send", "actor": "inst1", "text": "x3\n" },
     { "do": "expect", "actor": "sys1", "text": "x3\n" }

@@ -81,7 +81,6 @@ struct Status {
 pub(crate) struct ChannelShared {
     pub(crate) id: ChannelId,
     pub(crate) kind: ChannelKind,
-    pub(crate) config_version: u64,
     pub(crate) started_at: Timestamp,
     /// Whether this instance runs (an instance created stopped never started).
     ran: bool,
@@ -122,7 +121,6 @@ impl ChannelShared {
         Self {
             id,
             kind: channel.kind(),
-            config_version,
             started_at: now,
             ran: true,
             definition: std::sync::RwLock::new((Arc::new(channel.clone()), config_version)),
@@ -191,17 +189,18 @@ impl ChannelShared {
         shared
     }
 
-    /// The current definition.
-    pub(crate) fn definition(&self) -> Arc<ChannelConfig> {
-        self.versioned_definition().0
-    }
-
     /// The current definition with the configuration version it came from.
     pub(crate) fn versioned_definition(&self) -> (Arc<ChannelConfig>, u64) {
         self.definition
             .read()
             .unwrap_or_else(PoisonError::into_inner)
             .clone()
+    }
+
+    /// The configuration version of the definition in effect: the version that started
+    /// the instance, or the version of its last in-place update.
+    pub(crate) fn config_version(&self) -> u64 {
+        self.versioned_definition().1
     }
 
     /// Applies an in-place change (label, tags, filters, mappings, delivery policy).
@@ -213,7 +212,8 @@ impl ChannelShared {
         self.span.in_scope(|| {
             tracing::info!(
                 event = "channel.updated",
-                "Channel {} updated in place",
+                config_version = version,
+                "Channel {} updated in place to configuration version {version}",
                 self.id
             );
         });

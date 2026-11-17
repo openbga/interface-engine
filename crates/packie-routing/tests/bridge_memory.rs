@@ -570,7 +570,7 @@ async fn apply_restarts_only_changed_channels_and_relabels_in_place() {
     expect_open(&mut inst1, 200).await;
     send(&mut inst1, b"x3\n").await;
     expect_bytes(&mut s1, b"x3\n").await;
-    assert_eq!(h.status(x).config_version, 1);
+    assert_eq!(h.status(x).config_version, h.config.config_version);
 
     // Removal stops only the removed channel.
     h.apply(document(

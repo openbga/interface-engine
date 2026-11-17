@@ -34,7 +34,7 @@ impl ChannelShared {
             state,
             stop_reason: status.stop_reason,
             state_since: status.since,
-            config_version: self.config_version,
+            config_version: self.config_version(),
             instance_started_at: self.ran.then_some(self.started_at),
             endpoints: channel.endpoint_ids(),
             traffic,

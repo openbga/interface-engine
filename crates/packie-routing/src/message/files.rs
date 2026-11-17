@@ -285,7 +285,7 @@ fn receipt(
         source_peer: None,
         protocol: ProtocolKind::Delimited,
         received_at: unit.modified.min(Timestamp::now()),
-        config_version: cx.config.config_version,
+        config_version: cx.shared.config_version(),
         duplicate_detection: cx.channel.source.duplicate_detection,
         identifiers,
         source_file,

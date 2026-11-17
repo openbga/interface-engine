@@ -79,7 +79,7 @@ active configuration; the published value and the engine's internal value never 
 | `state` | string | `starting`, `running`, `retrying`, `degraded`, `stopped`. |
 | `stop_reason` | string or null | When `stopped`: `operator_paused`, `disabled_by_config`, `removed_by_config`, `replaced_by_config`, `shutdown`, `not_implemented` (this build cannot run the channel) or `store_unavailable` (a message channel waiting for the message store to open). The last two are not intentional, so the node is `degraded`. |
 | `state_since` | string | When `state` last changed. |
-| `config_version` | integer | Version of the definition the running instance was started from. |
+| `config_version` | integer | Version of the definition in effect: the version that started the instance, or the version of its last in-place update. An unchanged channel keeps its version when other channels change. |
 | `instance_started_at` | string or null | Start of the running instance. |
 | `endpoints` | array | Ids of the endpoints the channel uses. |
 | `traffic` | object | `bytes_in`, `bytes_out`, `messages_in`, `messages_out`, `errors` (integers) and `last_activity` (string or null). Bridges: in is A to B, out is B to A. |
@@ -314,7 +314,7 @@ lower case. Not every event carries every field below.
 | `bytes`, `segment_count` | integer | traffic and buffer events |
 | `ack_code`, `ack_level` | string | delivery acknowledgement events |
 | `peer` | string | peer address (listener and endpoint events) |
-| `config_version` | integer | config and channel start events |
+| `config_version` | integer | config, channel start and in-place update events |
 | `error_code`, `error_summary` | string | failures; summary follows [section 7.4](#74-error-summaries) |
 
 ### 7.3 Event types
@@ -336,7 +336,7 @@ Levels are as emitted; a row with two levels names both.
 | `channel.started` | info | Instance created | `config_version` |
 | `channel.stopped` | info | Instance stopped | `stop_reason` |
 | `channel.state_changed` | info | Any channel state change | `channel_state`, `session_state` |
-| `channel.updated` | info | A configuration change applied in place | |
+| `channel.updated` | info | A configuration change applied in place | `config_version` |
 | `channel.failed` | error | A channel runner crashed; it restarts | `error_summary` |
 | `channel.compile_failed` | error | Filters or mappings did not compile; the previous form stays | `problems` |
 | `bridge.session_opened`, `bridge.session_closed` | info | Session established, ended | `session_state`; `peer_a`, `peer_b` on open |

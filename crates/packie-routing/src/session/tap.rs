@@ -106,13 +106,14 @@ fn observe(task: &TapTask, observation: Observation) {
             let (Some(sink), Some(cell)) = (&task.sink, shared.side(from)) else {
                 return;
             };
+            let (definition, config_version) = shared.versioned_definition();
             sink.observed(TapObservation {
                 channel_id: shared.id,
-                channel_label: shared.definition().label().to_owned(),
+                channel_label: definition.label().to_owned(),
                 from,
                 endpoint_id: cell.endpoint_id,
                 protocol: task.protocol,
-                config_version: shared.config_version,
+                config_version,
                 message: bytes,
             });
         }

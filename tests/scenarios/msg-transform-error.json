@@ -53,7 +53,7 @@
         "OBX|1|NM|GLU^Glucose||95|mg/dL|70-110|X|||F|||20260101115900"
       ] },
     { "do": "assert_store", "actor": "engine", "table": "messages", "where": { "control_id": "CTRL-TE-1" }, "count": 1,
-      "each": { "state": "routed", "response_code": "AA", "original_text": { "contains": "OBX|1|NM" } } },
+      "each": { "state": "routed", "response_code": "AA", "config_version": 1, "original_text": { "contains": "OBX|1|NM" } } },
     { "do": "assert_store", "actor": "engine", "table": "deliveries", "where": { "message.control_id": "CTRL-TE-1" }, "count": 1,
       "each": { "state": "failed", "reason_code": "transform_error", "total_attempts": 0, "attempts": 0 } },
     { "do": "assert_alert", "actor": "engine", "code": "transform_failed", "scope": { "channel": "hl7-map", "destination": "lis" },
@@ -114,6 +114,9 @@
     { "do": "expect_message", "actor": "lis", "protocol": "hl7_mllp", "reply": "AA",
       "assert": [ { "path": "OBX.8", "equals": "H" } ] },
     { "do": "assert_store", "actor": "engine", "table": "deliveries", "where": { "message.control_id": "CTRL-TE-2" }, "count": 1, "within_ms": 5000,
-      "each": { "state": "acknowledged", "mapping_version": 2 } }
+      "each": { "state": "acknowledged", "mapping_version": 2 } },
+    { "do": "assert_store", "actor": "engine", "table": "messages", "where": { "control_id": "CTRL-TE-2" }, "count": 1,
+      "each": { "config_version": 2 }, "note": "a message received after an in-place apply records the version in effect" },
+    { "do": "assert_snapshot", "actor": "engine", "target": { "channel": "hl7-map" }, "within_ms": 0, "expect": { "state": "running", "config_version": 2 } }
   ]
 }

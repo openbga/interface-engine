@@ -232,7 +232,7 @@ impl Session<'_> {
             source_peer: self.peer.clone(),
             protocol,
             received_at: Timestamp::now(),
-            config_version: self.cx.config.config_version,
+            config_version: self.cx.shared.config_version(),
             duplicate_detection: self.cx.channel.source.duplicate_detection,
             identifiers,
             source_file: None,
