@@ -105,13 +105,16 @@ async fn requests_errors_and_subscriptions() {
     rebind(&endpoint).await;
 }
 
-/// Binds `endpoint` again. Windows frees a pipe name once its last instance is closed,
-/// and the aborted connection tasks close theirs asynchronously: allow them a moment.
+/// Binds `endpoint` again. A Unix socket file is removed with the server, so the bind
+/// succeeds at once. Windows frees a pipe name once its last instance is closed, and the
+/// aborted connection tasks close theirs asynchronously: allow them a moment there.
 async fn rebind(endpoint: &str) -> IpcServer {
     let deadline = tokio::time::Instant::now() + Duration::from_secs(5);
     loop {
         match IpcServer::bind(endpoint) {
-            Err(packie_ipc::TransportError::InUse(_)) if tokio::time::Instant::now() < deadline => {
+            Err(packie_ipc::TransportError::InUse(_))
+                if cfg!(windows) && tokio::time::Instant::now() < deadline =>
+            {
                 tokio::time::sleep(Duration::from_millis(20)).await;
             }
             bound => return bound.unwrap(),
