@@ -598,6 +598,68 @@ async fn a_corrected_mapping_applies_in_place_and_a_resend_runs_it() {
 }
 
 #[tokio::test]
+async fn messages_after_an_in_place_update_record_the_new_configuration_version() {
+    let with = |table: Value| {
+        let mut destination = default_destination();
+        destination["mapping"] = json!({
+            "tables": {"codes": table},
+            "rules": [{"op": "lookup", "from": "MSH.10", "table": "codes", "to": "MSH.10", "on_missing": "error"}],
+        });
+        hl7_document(hl7_channel(
+            json!({}),
+            json!({}),
+            json!({"destinations": [destination]}),
+        ))
+    };
+    let mut rig = MessageRig::start(with(json!({"CTRL-V1": "OLD-1"}))).await;
+    let (_listener, mut lis) = lis(&rig).await;
+    let mut instrument = source(&rig).await;
+    instrument.send(&oru("CTRL-V1")).await;
+    assert_eq!(instrument.msa().await.0, "AA");
+    let first = Message::parse(&lis.frame().await).unwrap();
+    assert_eq!(first.get("MSH-10"), Some("OLD-1"));
+    lis.send(&ack("AA", "OLD-1")).await;
+    let version = rig.h.config.config_version;
+    assert_eq!(channel_snapshot(&rig.h).config_version, version);
+
+    // A row added to the code table: applied in place, the connection survives.
+    rig.h
+        .apply(with(json!({"CTRL-V1": "OLD-1", "CTRL-V2": "NEW-2"})))
+        .await;
+    assert_eq!(
+        rig.h.outcome("orders"),
+        packie_config::ApplyOutcome::Updated
+    );
+    let updated = rig.h.config.config_version;
+    assert_eq!(updated, version + 1);
+    assert_eq!(channel_snapshot(&rig.h).config_version, updated);
+    instrument.send(&oru("CTRL-V2")).await;
+    assert_eq!(instrument.msa().await.0, "AA");
+    let second = Message::parse(&lis.frame().await).unwrap();
+    assert_eq!(second.get("MSH-10"), Some("NEW-2"));
+    lis.send(&ack("AA", "NEW-2")).await;
+
+    let deliveries = rig
+        .deliveries_until("both acknowledged", |d| {
+            d.len() == 2 && d.iter().all(|d| d.state == DeliveryState::Acknowledged)
+        })
+        .await;
+    let messages = rig.messages_until("both stored", |m| m.len() == 2).await;
+    for (control, expected) in [("CTRL-V1", version), ("CTRL-V2", updated)] {
+        let message = messages
+            .iter()
+            .find(|m| m.summary.control_id.as_deref() == Some(control))
+            .unwrap();
+        assert_eq!(message.summary.config_version, expected, "{control}");
+        let delivery = deliveries
+            .iter()
+            .find(|d| d.message_id == message.summary.message_id)
+            .unwrap();
+        assert_eq!(delivery.mapping_version, Some(expected), "{control}");
+    }
+}
+
+#[tokio::test]
 async fn channel_traffic_counts_committed_and_delivered_messages() {
     let rig = rig(json!({}), json!({}), json!({})).await;
     let (_listener, mut lis) = lis(&rig).await;

@@ -75,12 +75,12 @@ async fn supervise(runner: Arc<dyn ChannelRunner>, cx: RunContext) {
         ChannelConfig::Message(message) => Backoff::new(&message.retry),
     };
     let mut crashes = 0_u32;
+    let config_version = shared.config_version();
     tracing::info!(
         event = "channel.started",
-        config_version = shared.config_version,
-        "Channel {} started from configuration version {}",
-        shared.id,
-        shared.config_version
+        config_version,
+        "Channel {} started from configuration version {config_version}",
+        shared.id
     );
     loop {
         let task = tokio::spawn(runner.run(cx.clone()).instrument(tracing::Span::current()));

@@ -141,7 +141,8 @@ An identifier that is absent is `null`.
 `sample_id`, `patient_id` (identifiers as the protocol provides them, nullable),
 `source_endpoint_id`, `source_peer`, `source_file` (name, file hash, row range, for files),
 `response_code`, `responded_at`, `abort_reason`, `reason_code` (for `filtered` and `invalid`),
-`config_version`, and the derived `delivery_summary`: `none`, `pending` (any `queued` or
+`config_version` (the version of the channel definition in effect at receipt, including
+an in-place update), and the derived `delivery_summary`: `none`, `pending` (any `queued` or
 `sending`, none needing attention), `attention` (any `rejected`, `failed`, `timed_out`,
 `outcome_unknown`), `complete` (every delivery `acknowledged` or `cancelled`).
 
