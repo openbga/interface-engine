@@ -130,7 +130,8 @@ The [presentation website](https://openbga.github.io/interface-engine/) is the s
 `website/`, with no build step. [pages.yml](../../.github/workflows/pages.yml) publishes it
 with GitHub Pages when `website/` changes on `main`, or when run by hand, so a change made on
 `develop` goes live when it reaches `main`. Preview it with
-`python3 -m http.server -d website`.
+`python3 -m http.server -d website`. The page loads Plausible analytics (no cookies) to count
+visits; the snippet belongs only in `website/`, never in the engine, console or documentation.
 
 The screens in `website/media/screens/` are captured from the console's browser mock
 (`npm run dev`, then `/?mock=1&steady=1#/messages` and the other pages) at 1440×900 and show
