@@ -13,8 +13,8 @@ runtime configuration: to add a channel to an existing installation, first expor
 
 ## 1. Serial analyzer to a TCP listener
 
-The analyzer uses serial; the LIS connects to PACK-IE over TCP and speaks the analyzer's
-protocol itself. PACK-IE passes both directions unchanged. This example observes ASTM framing
+The analyzer uses serial; the LIS connects to the engine over TCP and speaks the analyzer's
+protocol itself. The engine passes both directions unchanged. This example observes ASTM framing
 to count messages; it does not acknowledge the analyzer or transform results.
 
 Replace these installation values before applying:
@@ -78,7 +78,7 @@ Save as `bridge.json`:
 ```
 
 Receiver B is prepared first. Until the LIS connects, the listener waits and the serial
-side is disconnected. After that connection, PACK-IE opens the serial port and pairs the two
+side is disconnected. After that connection, the engine opens the serial port and pairs the two
 sides. Closing either side closes the other and starts recovery. Buffers are bounded per
 direction (defaults: 1000 segments and 10 MiB); a slow receiver holds the sender back.
 
@@ -119,8 +119,8 @@ live transcript works independently of this setting.
 
 ## 2. ASTM results to HL7 ORU over MLLP
 
-Here PACK-IE receives ASTM over TCP, stores it, then maps it to HL7 `ORU^R01` and connects to the
-LIS's MLLP listener. An analyzer frame ACK means PACK-IE has stored that frame; it does not mean
+Here the engine receives ASTM over TCP, stores it, then maps it to HL7 `ORU^R01` and connects to the
+LIS's MLLP listener. An analyzer frame ACK means the engine has stored that frame; it does not mean
 the LIS accepted the result.
 
 Use an analyzer format with one patient and one specimen per ASTM message, numeric results,
@@ -212,7 +212,7 @@ on port 5200. Save as `astm-to-hl7.json`:
 The loop creates an OBX for every result record. Inside it, a `from` path beginning `$.`
 reads the current ASTM R record; a `to` path beginning `$.` writes the new HL7 OBX. The
 `tests` table maps analyzer codes to local LIS codes. A missing code fails the mapping
-instead of silently using an unknown code. PACK-IE generates the HL7 time, control id, processing
+instead of silently using an unknown code. The engine generates the HL7 time, control id, processing
 id (`P`) and version (`2.5.1`); the mapping supplies the message type and application names.
 
 ### Create it in the console
@@ -259,6 +259,6 @@ In **Messages**, filter to `analyzer-results` and open the result. The message i
 the LIS delivery should be `acknowledged`, level `accepted`, code `AA`. Compare original ASTM
 and transformed HL7, including all result records and units. An LIS `AA` confirms its
 application accepted the message; it does not prove that a person reviewed the result.
-If the destination is down, PACK-IE can keep receiving and queuing results. See
+If the destination is down, the engine can keep receiving and queuing results. See
 [Running and monitoring](running-and-monitoring.md) for states and actions, or
 [Troubleshooting](troubleshooting.md) for recovery.

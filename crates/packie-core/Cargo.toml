@@ -1,6 +1,6 @@
 [package]
 name = "packie-core"
-description = "Shared identifiers, time, state enums and byte helpers for Positive ACK"
+description = "Shared identifiers, time, state enums and byte helpers for OpenBGA Interface Engine"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

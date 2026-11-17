@@ -15,7 +15,7 @@ use packie_sim::runner::{DoneCallback, HostOptions, locate_engine, run_file, run
 use packie_sim::scenario::{Capability, Scenario};
 use packie_sim::soak::SoakOptions;
 
-/// Scripted peers and the scenario runner for Positive ACK.
+/// Scripted peers and the scenario runner for OpenBGA Interface Engine.
 #[derive(Debug, Parser)]
 #[command(name = "packie-sim", version, about)]
 struct Cli {

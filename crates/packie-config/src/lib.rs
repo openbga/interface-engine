@@ -1,4 +1,4 @@
-//! Configuration of a Positive ACK node, exactly as `docs/spec/configuration.md`
+//! Configuration of an OpenBGA Interface Engine node, exactly as `docs/spec/configuration.md`
 //! defines it.
 //!
 //! Two documents, both JSON with `snake_case` keys and unknown fields rejected (except

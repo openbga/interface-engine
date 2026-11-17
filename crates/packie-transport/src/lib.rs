@@ -1,4 +1,4 @@
-//! Endpoint transports for Positive ACK (`docs/spec/bridge-channels.md` §9–§10,
+//! Endpoint transports for OpenBGA Interface Engine (`docs/spec/bridge-channels.md` §9–§10,
 //! `docs/spec/configuration.md` §5).
 //!
 //! Channels own retry, pairing and sessions; transports only open, accept, read and write,

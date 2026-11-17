@@ -1,12 +1,12 @@
-# Positive ACK Interface Engine (PACK-IE)
+# OpenBGA Interface Engine
 
-[Presentation website](https://openbga.github.io/pack-ie/) ·
+[Presentation website](https://openbga.github.io/interface-engine/) ·
 [Operator guides](docs/operations/README.md) ·
 [Developer guide](docs/development/README.md) ·
 [Contributing](CONTRIBUTING.md) ·
 [Security](SECURITY.md)
 
-Positive ACK is a free, open-source (AGPL-3.0-only) interface engine for clinical
+OpenBGA Interface Engine is a free, open-source (AGPL-3.0-only) interface engine for clinical
 laboratories: the middleware between analyzers, LIS/LIMS, EHRs and other applications.
 It receives and sends instrument traffic (ASTM, vendor protocols), exchanges HL7 v2 over
 MLLP, imports and exports files, bridges serial and TCP ports, and keeps a durable record
@@ -14,7 +14,7 @@ of every message it handles. It runs on one computer the laboratory owns, inside
 network, with no cloud service required. It is an [OpenBGA](https://github.com/openbga)
 project.
 
-[![The Messages page of the PACK-IE Console: received messages with their channel, state and delivery outcome per destination, shown with demo data](website/media/screens/messages-1440.webp)](https://openbga.github.io/pack-ie/)
+[![The Messages page of the OpenBGA Interface Engine Console: received messages with their channel, state and delivery outcome per destination, shown with demo data](website/media/screens/messages-1440.webp)](https://openbga.github.io/interface-engine/)
 
 **Status: development on synthetic data.** Version 0.2.0 is built and tested, but no
 release has been published, installers are unsigned and the software is not clinically
@@ -42,7 +42,7 @@ validated. [STATUS.md](STATUS.md) records what is verified on each platform and 
 
 - **`packie`** — the engine, a Rust binary that runs as a console process or as an OS service
   (Windows service, launchd, systemd) and also serves as the command-line client.
-- **PACK-IE Console** — a desktop application (Tauri 2, React) that attaches to the running
+- **OpenBGA Interface Engine Console** — a desktop application (Tauri 2, React) that attaches to the running
   engine: dashboard, channels, endpoints, messages, logs, configuration.
 
 ## Read
@@ -68,7 +68,7 @@ and configure a [first channel](docs/operations/first-channel.md). Use synthetic
 
 ## Support
 
-Community support is through [GitHub issues](https://github.com/openbga/pack-ie/issues), on a
+Community support is through [GitHub issues](https://github.com/openbga/interface-engine/issues), on a
 best-effort basis. Report vulnerabilities privately as the [security policy](SECURITY.md)
 describes. Are you looking for support? Contact [bgasoft.com](https://bgasoft.com).
 
@@ -90,7 +90,7 @@ OpenBGA and the OpenBGA product names and logos are trademarks of BGASoft Inc. T
 does not grant permission to use them (AGPL-3.0 section 7(e)), except as needed to describe
 the origin of the software.
 
-Positive ACK is developed with substantial AI assistance, with human direction, review and
+OpenBGA Interface Engine is developed with substantial AI assistance, with human direction, review and
 testing. That effort does not guarantee correctness, security, regulatory compliance or fitness
 for clinical use. The software is provided as is, with the warranty disclaimers and liability
 limitations in AGPLv3 sections 15–17; it is built and tested on synthetic data and is not

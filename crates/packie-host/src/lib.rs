@@ -1,4 +1,4 @@
-//! Hosting the Positive ACK engine as an OS service (`docs/requirements.md` ENG-01,
+//! Hosting the Interface Engine as an OS service (`docs/requirements.md` ENG-01,
 //! PKG-01; `docs/decisions.md` #2).
 //!
 //! - [`ServiceManager`] installs, removes, starts, stops and reports the service on each

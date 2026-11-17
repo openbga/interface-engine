@@ -1,4 +1,4 @@
-# Prints the PACK-IE version: `[workspace.package] version` of the workspace Cargo.toml.
+# Prints the Interface Engine version: `[workspace.package] version` of the workspace Cargo.toml.
 # Same logic as packaging/version.sh.
 $ErrorActionPreference = 'Stop'
 

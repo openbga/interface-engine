@@ -183,7 +183,7 @@ test.describe("Running the report", () => {
 
     const file = await exportCsv(page);
     expect(file.name).toMatch(
-      new RegExp(`^packie-transmission-${STA.id}-\\d{4}-\\d\\d-\\d\\d\\.csv$`),
+      new RegExp(`^interface-engine-transmission-${STA.id}-\\d{4}-\\d\\d-\\d\\d\\.csv$`),
     );
     const [header, ...lines] = parseCsv(file.text);
     expect(header).toEqual([

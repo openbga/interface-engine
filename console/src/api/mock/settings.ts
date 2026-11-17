@@ -86,10 +86,10 @@ export function engineSettings(
   return {
     nodeId: "lab-pc-01",
     nodeName: "Main Lab Interface PC",
-    stateDir: "C:\\ProgramData\\PACK-IE\\state",
-    logDir: "C:\\ProgramData\\PACK-IE\\logs",
+    stateDir: "C:\\ProgramData\\InterfaceEngine\\state",
+    logDir: "C:\\ProgramData\\InterfaceEngine\\logs",
     ipcPath: "\\\\.\\pipe\\packie-lab-pc-01",
-    bootstrapPath: "C:\\ProgramData\\PACK-IE\\bootstrap.json",
+    bootstrapPath: "C:\\ProgramData\\InterfaceEngine\\bootstrap.json",
     hosting: "service",
     logRetentionDays: 30,
     logRingSize,

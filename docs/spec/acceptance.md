@@ -244,7 +244,7 @@ suites against a release engine), `soak` (a `packie-sim soak` report).
 
 | ID | Scenario | Expected observable outcome | Requirements | Verified by |
 | --- | --- | --- | --- | --- |
-| P-01 | An alert is raised and cleared with an e-mail relay and a webhook configured | One e-mail (subject `[PACK-IE <node>] <SEVERITY> <code> raised` or `cleared`) and one JSON `POST` per change; only the fields of [diagnostics.md §6.1](diagnostics.md#61-notifications), nothing from messages | LOG-03 | `crate: packie-notify`, `cli` (local SMTP and HTTP sinks) |
+| P-01 | An alert is raised and cleared with an e-mail relay and a webhook configured | One e-mail (subject `[Interface Engine <node>] <SEVERITY> <code> raised` or `cleared`) and one JSON `POST` per change; only the fields of [diagnostics.md §6.1](diagnostics.md#61-notifications), nothing from messages | LOG-03 | `crate: packie-notify`, `cli` (local SMTP and HTTP sinks) |
 | P-02 | An alert that flaps | At most one message per alert per `rate_limit_minutes`; suppressed changes are logged at debug | LOG-03 | `crate: packie-notify` |
 | P-03 | `packie notify test` and the console's Notifications tab | Every target is named with accepted or why not; audited as `notification_test` | LOG-03 | `cli`, console `notifications` |
 | P-04 | A target that cannot be reached | `notification.failed` is logged; `notifications_failing` names the target; a later successful send clears it | LOG-03 | `crate: packie-notify`, `cli` |

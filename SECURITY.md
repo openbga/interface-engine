@@ -8,7 +8,7 @@ latest release line receives security fixes.
 ## Report privately
 
 Use GitHub's private vulnerability reporting:
-<https://github.com/openbga/pack-ie/security/advisories/new> ("Report a vulnerability" under
+<https://github.com/openbga/interface-engine/security/advisories/new> ("Report a vulnerability" under
 the repository's Security tab). It reaches the maintainer privately; do not open a
 public issue for a suspected vulnerability. If that form is unavailable, contact the maintainer
 through the GitHub profile linked from the repository and ask for a private channel.
@@ -26,7 +26,7 @@ guaranteed response or resolution time.
 The engine, desktop console and packaging are in scope, including input handling, local IPC
 restrictions, secret handling and unintended disclosure of stored messages.
 
-PACK-IE runs on a laboratory-controlled computer inside a private lab network, with listeners
+The engine runs on a laboratory-controlled computer inside a private lab network, with listeners
 bound to configured addresses and management confined to local IPC. Local management users
 are trusted to inspect messages and change configuration; the operating system controls who
 can reach that interface and access its files.

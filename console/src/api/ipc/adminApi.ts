@@ -52,7 +52,7 @@ export class AdminApi {
     let saved: { path: string; rows: number } | null;
     try {
       saved = await this.bridge.invoke("save_audit_export", {
-        suggestedName: `packie-audit-${new Date().toISOString().slice(0, 10)}.${
+        suggestedName: `interface-engine-audit-${new Date().toISOString().slice(0, 10)}.${
           request.format === "csv" ? "csv" : "jsonl"
         }`,
         ...auditExportToIpc(request),

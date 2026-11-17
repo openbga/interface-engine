@@ -227,7 +227,7 @@ describe("files the shell saves", () => {
       include_bodies: true,
       filter: { channels: ["hl7-results"], identifier: { value: "AS66", prefix: true } },
     });
-    expect(args?.suggestedName).toMatch(/^packie-messages-\d{4}-\d{2}-\d{2}\.jsonl$/);
+    expect(args?.suggestedName).toMatch(/^interface-engine-messages-\d{4}-\d{2}-\d{2}\.jsonl$/);
   });
 
   it("words a failed save as the engine error the pages expect", async () => {

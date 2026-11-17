@@ -6,7 +6,7 @@ use ts_rs::TS;
 use super::Charset;
 use crate::defaults::{mib_1, ms_30000, three};
 
-/// The side PACK-IE plays in LIS01-A2 link contention.
+/// The side the engine plays in LIS01-A2 link contention.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
 pub enum AstmRole {

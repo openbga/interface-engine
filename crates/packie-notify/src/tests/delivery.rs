@@ -110,9 +110,12 @@ async fn mail_goes_through_smtp_to_every_recipient_address() {
     let (addr, mut messages) = smtp_listener(None).await;
     let notifier = notifier(&mail_settings(addr));
     notifier.alert_changed(&raised(Severity::Critical, "chan-a"), &Labels::default());
-    let message = next(&mut messages).await;
+    // A long header line is folded; unfold it before comparing.
+    let message = next(&mut messages).await.replace("\r\n ", " ");
     assert!(
-        message.contains("Subject: [PACK-IE Lab One] CRITICAL no_peer_connected raised: chan-a"),
+        message.contains(
+            "Subject: [Interface Engine Lab One] CRITICAL no_peer_connected raised: chan-a"
+        ),
         "{message}"
     );
     assert!(message.contains("Channel: chan-a"));
@@ -126,7 +129,7 @@ async fn mail_goes_through_smtp_to_every_recipient_address() {
     assert!(
         next(&mut messages)
             .await
-            .contains("Subject: [PACK-IE Lab One] INFO test test")
+            .contains("Subject: [Interface Engine Lab One] INFO test test")
     );
 }
 

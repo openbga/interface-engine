@@ -14,7 +14,7 @@ use crate::service::{DISPLAY_NAME, MAX_STOP_SECONDS, SERVICE_NAME, ServiceStatus
 pub(super) const ACCOUNT: &str = "LocalSystem";
 
 /// What the SCM shows for the service.
-pub(super) const DESCRIPTION: &str = "Positive ACK laboratory interface engine";
+pub(super) const DESCRIPTION: &str = "OpenBGA Interface Engine, a laboratory interface engine";
 /// The delay before the SCM restarts a failed service.
 pub(super) const RESTART_DELAY: Duration = Duration::from_secs(5);
 /// Failure actions configured, all restarts; the SCM repeats the last action for any
@@ -329,9 +329,9 @@ mod tests {
         assert_eq!(
             runner.calls(),
             [
-                "eventcreate /L APPLICATION /T INFORMATION /SO packie /ID 1 /D Positive ACK started",
-                "eventcreate /L APPLICATION /T INFORMATION /SO packie /ID 2 /D Positive ACK stopped",
-                "eventcreate /L APPLICATION /T ERROR /SO packie /ID 3 /D Positive ACK did not start and will not be restarted until the configuration is fixed: bootstrap: secret store",
+                "eventcreate /L APPLICATION /T INFORMATION /SO packie /ID 1 /D OpenBGA Interface Engine started",
+                "eventcreate /L APPLICATION /T INFORMATION /SO packie /ID 2 /D OpenBGA Interface Engine stopped",
+                "eventcreate /L APPLICATION /T ERROR /SO packie /ID 3 /D OpenBGA Interface Engine did not start and will not be restarted until the configuration is fixed: bootstrap: secret store",
             ]
         );
     }

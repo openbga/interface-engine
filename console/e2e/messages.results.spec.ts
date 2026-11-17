@@ -230,5 +230,5 @@ test("H-05: a row opens its message by click and by Enter", async ({ page }) => 
   await expect(page).toHaveURL(/#\/messages\/msg-\d+/);
   await expect(page.getByRole("heading", { level: 1, name: keyedId ?? "" })).toBeVisible();
   // Nothing of the message is in the address or the window title but its id and identifier.
-  expect(await page.title()).toBe(`${keyedId} · PACK-IE Console`);
+  expect(await page.title()).toBe(`${keyedId} · OpenBGA Interface Engine Console`);
 });

@@ -257,7 +257,7 @@ mod tests {
         );
         let info = service_info(&spec);
         assert_eq!(info.name, "packie");
-        assert_eq!(info.display_name, "Positive ACK");
+        assert_eq!(info.display_name, "OpenBGA Interface Engine");
         assert_eq!(info.service_type, ServiceType::OWN_PROCESS);
         assert_eq!(info.start_type, ServiceStartType::AutoStart);
         assert_eq!(info.error_control, ServiceErrorControl::Normal);

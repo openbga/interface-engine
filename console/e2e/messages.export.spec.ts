@@ -38,7 +38,7 @@ async function exportFile(page: Page, dialog: Locator): Promise<string> {
     page,
     dialog.getByRole("button", { name: "Export", exact: true }),
   );
-  expect(file.suggestedFilename()).toBe("packie-messages.csv");
+  expect(file.suggestedFilename()).toBe("interface-engine-messages.csv");
   return downloadText(file);
 }
 
@@ -88,7 +88,7 @@ test("ME-01: Export… of a filtered grid downloads a CSV of exactly those messa
 
   await expect(dialog).toHaveCount(0);
   await expect(toast(page, "Messages exported")).toContainText(
-    `${total} messages saved to packie-messages.csv.`,
+    `${total} messages saved to interface-engine-messages.csv.`,
   );
 });
 
@@ -159,7 +159,7 @@ test("ME-03: a failed export shows its error in the dialog and leaves no downloa
   await mockHandle(page, (handle) => handle.setAuditAvailable(true));
   const records = parseCsv(await exportFile(page, dialog));
   expect(records.length).toBeGreaterThan(1);
-  expect(downloads).toEqual(["packie-messages.csv"]);
+  expect(downloads).toEqual(["interface-engine-messages.csv"]);
 });
 
 test("ME-04: the export is in the audit log with its filter, format, content choice and count", async ({

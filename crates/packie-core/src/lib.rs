@@ -1,4 +1,4 @@
-//! Shared contracts for Positive ACK: identifiers, time, state enums, byte sizes.
+//! Shared contracts for OpenBGA Interface Engine: identifiers, time, state enums, byte sizes.
 //!
 //! Everything here crosses crate boundaries and the IPC boundary, so it is small and
 //! stable:

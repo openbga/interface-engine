@@ -63,7 +63,7 @@ function Hl7Settings({ prefix, side }: { prefix: string; side: ConnectorSide }) 
         name={`${prefix}.settings.hl7Version`}
         label="HL7 version"
         isRequired
-        description="The version of the messages PACK-IE writes (MSH-12), such as 2.5.1. Received messages keep their own."
+        description="The version of the messages the engine writes (MSH-12), such as 2.5.1. Received messages keep their own."
         format={{
           pattern: /^2\.\d+(\.\d+)?$/,
           message: "Enter a version such as 2.3, 2.5 or 2.5.1.",
@@ -73,7 +73,7 @@ function Hl7Settings({ prefix, side }: { prefix: string; side: ConnectorSide }) 
       <FormCheckbox
         name={`${prefix}.settings.requireEndCr`}
         label="Carriage return after the end block"
-        description="Ticked: a frame ends with the end byte and a carriage return. Clear it for senders that end a frame with the end byte alone; a carriage return that does follow is accepted. Frames PACK-IE writes always end with both."
+        description="Ticked: a frame ends with the end byte and a carriage return. Clear it for senders that end a frame with the end byte alone; a carriage return that does follow is accepted. Frames the engine writes always end with both."
       />
       {side === "destination" ? (
         <TextInput
@@ -153,7 +153,7 @@ function AstmSettings({ prefix, side }: { prefix: string; side: ConnectorSide })
             label="ENQ attempts"
             isRequired
             validate={wholeNumber({ min: 1, max: 10 })}
-            description="1 to 10. How many times PACK-IE asks to send a message before giving up; the delivery policy then retries. Some instruments document 7."
+            description="1 to 10. How many times the engine asks to send a message before giving up; the delivery policy then retries. Some instruments document 7."
           />
           <TextInput
             name={`${prefix}.settings.busyRetryMs`}

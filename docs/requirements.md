@@ -1,6 +1,6 @@
 # Requirements
 
-High-level, stable requirements for Positive ACK. Each line is an outcome, not a design;
+High-level, stable requirements for OpenBGA Interface Engine. Each line is an outcome, not a design;
 [architecture.md](architecture.md) and `docs/spec/` say how. Version 1 is defined at the end.
 
 ## Users and setting

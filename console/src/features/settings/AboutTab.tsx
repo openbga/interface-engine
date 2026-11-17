@@ -7,7 +7,7 @@ import { Section } from "@/components/Section";
 export function AboutTab() {
   const info = useEngineQuery(["getEngineInfo"], (api) => api.getEngineInfo());
   return (
-    <Section title="About Positive ACK">
+    <Section title="About OpenBGA Interface Engine">
       <QueryContent query={info} what="version information">
         {(data) => (
           <Facts

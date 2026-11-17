@@ -1,4 +1,4 @@
-//! The local management interface of a Positive ACK engine (`docs/decisions.md` #8).
+//! The local management interface of an OpenBGA Interface Engine (`docs/decisions.md` #8).
 //!
 //! - **Transport**: a Unix domain socket (`<state>/packie.sock`, mode `0600`, or `0660` for
 //!   the `ipc.group`) or a Windows named pipe (`\\.\pipe\packie-<node>`, remote clients

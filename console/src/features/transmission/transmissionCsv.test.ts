@@ -109,17 +109,19 @@ describe("transmissionCsv", () => {
 });
 
 describe("transmissionFileName", () => {
-  it("is packie-transmission-<channel>-<date>.csv, the date being the day of the report", () => {
-    expect(transmissionFileName(report())).toBe("packie-transmission-ch-msg-sta-2026-11-07.csv");
+  it("is interface-engine-transmission-<channel>-<date>.csv, the date being the day of the report", () => {
+    expect(transmissionFileName(report())).toBe(
+      "interface-engine-transmission-ch-msg-sta-2026-11-07.csv",
+    );
     expect(transmissionFileName(report({ channelId: "ch/odd id" }))).toBe(
-      "packie-transmission-ch_odd_id-2026-11-07.csv",
+      "interface-engine-transmission-ch_odd_id-2026-11-07.csv",
     );
   });
 
   it("is saved as a CSV report file", () => {
     const made = report();
     expect(transmissionFile(made, made.rows)).toMatchObject({
-      name: "packie-transmission-ch-msg-sta-2026-11-07.csv",
+      name: "interface-engine-transmission-ch-msg-sta-2026-11-07.csv",
       format: "csv",
     });
   });

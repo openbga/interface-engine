@@ -81,11 +81,6 @@ section[id] {
 .wordmark-product span {
   color: var(--accent);
 }
-.wordmark-parent {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--muted);
-}
 nav {
   display: flex;
   gap: 28px;
