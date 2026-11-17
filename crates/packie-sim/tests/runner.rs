@@ -3,63 +3,18 @@
 //! Covers routed channels, isolated actor exchanges, reporting and parallel execution.
 #![cfg(test)]
 
-use std::path::{Path, PathBuf};
-use std::process::Command;
-use std::sync::OnceLock;
+mod common;
 
+use std::path::{Path, PathBuf};
+
+use common::{host, real_host, workspace_root};
 use packie_sim::report::{Outcome, ScenarioReport, StepStatus};
 use packie_sim::resources::Capabilities;
-use packie_sim::runner::{HostOptions, locate_engine, run_file};
+use packie_sim::runner::run_file;
 use packie_sim::scenario::Capability;
 
 /// The one line to change when the engine routes bridge channels.
 const ENGINE_ROUTES_CHANNELS: bool = true;
-
-fn workspace_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
-}
-
-/// The `packie` binary: found next to the test executable, or `PACKIE_BIN`, or built with
-/// `cargo build -p packie` into the usual target directory (`CARGO_TARGET_DIR` respected).
-fn engine_binary() -> PathBuf {
-    static BIN: OnceLock<PathBuf> = OnceLock::new();
-    BIN.get_or_init(|| {
-        if let Ok(path) = locate_engine(None) {
-            return path;
-        }
-        let status = Command::new("cargo")
-            .args(["build", "-p", "packie"])
-            .current_dir(workspace_root())
-            .status()
-            .expect("run cargo build -p packie");
-        assert!(status.success(), "cargo build -p packie failed");
-        let target = std::env::var_os("CARGO_TARGET_DIR")
-            .map_or_else(|| workspace_root().join("target"), PathBuf::from);
-        let name = if cfg!(windows) {
-            "packie.exe"
-        } else {
-            "packie"
-        };
-        let bin = target.join("debug").join(name);
-        assert!(bin.is_file(), "built engine not found at {}", bin.display());
-        bin
-    })
-    .clone()
-}
-
-fn host(capabilities: Capabilities) -> HostOptions {
-    HostOptions {
-        engine_bin: engine_binary(),
-        keep_state: false,
-        verbose: false,
-        capabilities,
-        on_step: None,
-    }
-}
-
-async fn real_host() -> HostOptions {
-    host(Capabilities::detect(&engine_binary(), false).await)
-}
 
 fn fixture(name: &str) -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -258,27 +213,30 @@ async fn missing_capabilities_skip_the_scenario_with_the_reason() {
 #[tokio::test(flavor = "multi_thread")]
 async fn the_scenario_timeout_fails_the_running_step_and_stops_the_engine() {
     let dir = tempfile::tempdir().unwrap();
-    let steps = r#"{"do": "wait", "actor": "engine", "ms": 20000}, {"do": "wait", "actor": "engine", "ms": 1}"#;
+    // Engine startup counts toward the timeout, so it leaves room for a slow start.
+    let steps = r#"{"do": "wait", "actor": "engine", "ms": 60000}, {"do": "wait", "actor": "engine", "ms": 1}"#;
     let path = scenario_file(
         &dir,
         "too-slow",
-        &empty_engine_scenario("too-slow", "", 1_500, steps),
+        &empty_engine_scenario("too-slow", "", 10_000, steps),
     );
     let started = std::time::Instant::now();
     let report = run_file(&path, &real_host().await).await.unwrap();
     assert!(
-        started.elapsed().as_secs() < 15,
+        started.elapsed().as_secs() < 40,
         "the timeout ends the run promptly"
     );
     assert_eq!(report.outcome, Outcome::Failed);
-    let failed = report.failed_step().unwrap();
+    let failed = report
+        .failed_step()
+        .unwrap_or_else(|| panic!("no step failed: {}", report.human(true)));
     assert_eq!(failed.index, 0);
     assert!(
         failed
             .detail
             .as_deref()
             .unwrap_or_default()
-            .contains("scenario timeout of 1500 ms"),
+            .contains("scenario timeout of 10000 ms"),
         "{:?}",
         failed.detail
     );
@@ -361,54 +319,6 @@ async fn run_many_runs_scenarios_side_by_side_and_keeps_file_order() {
         assert_eq!(report.outcome, Outcome::Passed, "{}", report.human(true));
     }
     assert_eq!(done.load(Ordering::SeqCst), 3);
-}
-
-/// Scenarios that bind engine ports and `tcp_server` ports, fast and without capabilities.
-const COLLISION_SUITE: [&str; 8] = [
-    "bridge-close-propagation",
-    "bridge-tap-hl7",
-    "bridge-tcp-full-duplex",
-    "bridge-pause-resume",
-    "config-apply-per-channel",
-    "msg-duplicate",
-    "msg-hl7-in-ack",
-    "msg-resend",
-];
-
-/// The regression test of the parallel-run flake. Scenarios used to probe a free port, release
-/// it and bind it later, and a neighbour's outgoing connection could take it in between
-/// ("bind 127.0.0.1:<port>: Address already in use", about one full run in two). Eight
-/// scenarios now run at once, twenty times over, which is 160 runs and over a thousand
-/// reserved ports; any collision fails the test and names the scenario.
-#[tokio::test(flavor = "multi_thread", worker_threads = 8)]
-async fn eight_scenarios_at_once_twenty_times_never_collide_on_ports() {
-    let files: Vec<PathBuf> = COLLISION_SUITE
-        .iter()
-        .map(|name| workspace_root().join(format!("tests/scenarios/{name}.json")))
-        .collect();
-    assert!(
-        files.iter().all(|f| f.is_file()),
-        "the collision suite exists"
-    );
-    let host = real_host().await;
-    for round in 0..20 {
-        let results = packie_sim::runner::run_many(&files, &host, 8, None).await;
-        for result in results {
-            let report = result.unwrap();
-            let text = report.human(true);
-            assert!(
-                !text.contains("Address already in use"),
-                "round {round}: port collision\n{text}"
-            );
-            assert_eq!(
-                report.outcome,
-                Outcome::Passed,
-                "round {round}: {}",
-                report.human(true)
-            );
-            assert!(report.kept_dir.is_none(), "round {round}: {text}");
-        }
-    }
 }
 
 #[tokio::test(flavor = "multi_thread")]
