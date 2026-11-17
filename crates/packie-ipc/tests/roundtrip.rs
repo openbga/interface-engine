@@ -2,6 +2,7 @@
 #![cfg(test)]
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use packie_ipc::{
     ErrorCode, Event, Handler, IpcClient, IpcError, IpcServer, Request, Response, Topic,
@@ -97,10 +98,25 @@ async fn requests_errors_and_subscriptions() {
         Err(packie_ipc::TransportError::InUse(_))
     ));
 
+    drop(client);
     serving.abort();
     let _ = serving.await;
-    // The socket is removed with the server, so the next start binds cleanly.
-    IpcServer::bind(&endpoint).unwrap();
+    // The endpoint is released with the server, so the next start binds.
+    rebind(&endpoint).await;
+}
+
+/// Binds `endpoint` again. Windows frees a pipe name once its last instance is closed,
+/// and the aborted connection tasks close theirs asynchronously: allow them a moment.
+async fn rebind(endpoint: &str) -> IpcServer {
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(5);
+    loop {
+        match IpcServer::bind(endpoint) {
+            Err(packie_ipc::TransportError::InUse(_)) if tokio::time::Instant::now() < deadline => {
+                tokio::time::sleep(Duration::from_millis(20)).await;
+            }
+            bound => return bound.unwrap(),
+        }
+    }
 }
 
 #[cfg(unix)]

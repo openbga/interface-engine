@@ -258,27 +258,30 @@ async fn missing_capabilities_skip_the_scenario_with_the_reason() {
 #[tokio::test(flavor = "multi_thread")]
 async fn the_scenario_timeout_fails_the_running_step_and_stops_the_engine() {
     let dir = tempfile::tempdir().unwrap();
-    let steps = r#"{"do": "wait", "actor": "engine", "ms": 20000}, {"do": "wait", "actor": "engine", "ms": 1}"#;
+    // Engine startup counts toward the timeout, so it leaves room for a slow start.
+    let steps = r#"{"do": "wait", "actor": "engine", "ms": 60000}, {"do": "wait", "actor": "engine", "ms": 1}"#;
     let path = scenario_file(
         &dir,
         "too-slow",
-        &empty_engine_scenario("too-slow", "", 1_500, steps),
+        &empty_engine_scenario("too-slow", "", 10_000, steps),
     );
     let started = std::time::Instant::now();
     let report = run_file(&path, &real_host().await).await.unwrap();
     assert!(
-        started.elapsed().as_secs() < 15,
+        started.elapsed().as_secs() < 40,
         "the timeout ends the run promptly"
     );
     assert_eq!(report.outcome, Outcome::Failed);
-    let failed = report.failed_step().unwrap();
+    let failed = report
+        .failed_step()
+        .unwrap_or_else(|| panic!("no step failed: {}", report.human(true)));
     assert_eq!(failed.index, 0);
     assert!(
         failed
             .detail
             .as_deref()
             .unwrap_or_default()
-            .contains("scenario timeout of 1500 ms"),
+            .contains("scenario timeout of 10000 ms"),
         "{:?}",
         failed.detail
     );
