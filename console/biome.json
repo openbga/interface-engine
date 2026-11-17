@@ -10,6 +10,7 @@
     "includes": [
       "src/**",
       "e2e/**",
+      "scripts/**",
       "src-tauri/tauri.conf.json",
       "src-tauri/capabilities/**",
       "help/*.json",

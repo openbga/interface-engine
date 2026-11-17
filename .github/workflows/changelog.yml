@@ -1,0 +1,64 @@
+# A pull request that changes engine, console or packaging source adds an entry file under
+# changelog.d/ (CONTRIBUTING.md, Changelog entries), unless it carries the `no-changelog` label
+# because nothing changes for users, deployers or integrators. Kept apart from ci.yml so adding
+# or removing the label re-runs only this check. The develop-to-main release pull request and
+# Dependabot are exempt. That the entries are valid and CHANGELOG.md is current is checked in
+# ci.yml (console job).
+
+name: Changelog entry
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: changelog-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  entry:
+    name: changelog entry
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: >-
+      !contains(github.event.pull_request.labels.*.name, 'no-changelog') &&
+      github.event.pull_request.user.login != 'dependabot[bot]' &&
+      !(github.event.pull_request.base.ref == 'main' &&
+        github.event.pull_request.head.ref == 'develop' &&
+        github.event.pull_request.head.repo.full_name == github.repository)
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: An entry in changelog.d/ when source changed
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          changed=$(git diff --name-only "$BASE...$HEAD")
+          # Source that ships: engine crates, the console, installers and the default bootstrap.
+          # Tests, the simulator and the changelog tooling do not.
+          source=$(printf '%s\n' "$changed" \
+            | grep -E '^(crates/|console/|packaging/|config/|Cargo\.(toml|lock)$)' \
+            | grep -vE '^(crates/[^/]+/(tests|benches)/|crates/packie-sim/|console/e2e/|console/scripts/)|\.test\.(ts|tsx|mjs)$' \
+            || true)
+          if [ -z "$source" ]; then
+            echo "No application source changed; no entry needed."
+            exit 0
+          fi
+          added=$(git diff --name-only --diff-filter=A "$BASE...$HEAD" -- changelog.d/)
+          if [ -n "$added" ]; then
+            echo "Changelog entries added:"
+            echo "$added"
+            exit 0
+          fi
+          echo "::error::Application source changed but no file was added under changelog.d/."
+          echo "Add an entry (CONTRIBUTING.md, Changelog entries) and run 'npm run changelog' in console/,"
+          echo "or, if nothing changes for users, deployers or integrators, ask a maintainer for the"
+          echo "'no-changelog' label. Changed source:"
+          echo "$source"
+          exit 1

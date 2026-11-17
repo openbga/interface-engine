@@ -30,6 +30,7 @@ export const TOPICS = [
   "Source requirements",
   "States",
   "Transmission report",
+  "What's new",
 ] as const;
 
 export function article(page: Page): Locator {

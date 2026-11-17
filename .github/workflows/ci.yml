@@ -98,6 +98,8 @@ jobs:
           cache: npm
           cache-dependency-path: console/package-lock.json
       - run: npm ci
+      - name: Changelog (changelog.d/ entries valid, CHANGELOG.md current)
+        run: npm run changelog:check
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test

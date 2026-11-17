@@ -61,3 +61,6 @@ store every message durably, transform it and deliver it to one or more destinat
 12. **Report briefly:** what changed, which checks ran with results, new dependencies and
     open issues. Link files instead of pasting them. When delegating, give each child owned
     paths and a verification scope, and pass these rules on.
+13. **Changelog.** A change that users, deployers or integrators can observe adds an entry
+    file in `changelog.d/` in the same change and regenerates `CHANGELOG.md`; a pull request
+    with nothing observable says so. How: [CONTRIBUTING.md](CONTRIBUTING.md#changelog-entries).

@@ -13,7 +13,9 @@
     "typecheck": "tsc",
     "test": "vitest run",
     "e2e": "playwright test",
-    "knip": "knip"
+    "knip": "knip",
+    "changelog": "node scripts/changelog.mjs",
+    "changelog:check": "node scripts/changelog.mjs --check"
   },
   "dependencies": {
     "@tanstack/react-query": "5.104.2",

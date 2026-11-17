@@ -11,7 +11,8 @@ export default defineConfig({
   server: {
     port: 5174,
     strictPort: true,
-    // The preset catalog is the engine crate's own JSON file (crates/packie-config/profiles).
+    // Files outside console/: the preset catalog (crates/packie-config/profiles) and the
+    // What's new entries (changelog.d).
     fs: { allow: [".."] },
   },
   build: {
@@ -22,7 +23,7 @@ export default defineConfig({
     fsModuleCache: false,
     environment: "jsdom",
     testTimeout: 20_000,
-    include: ["src/**/*.test.{ts,tsx}"],
+    include: ["src/**/*.test.{ts,tsx}", "scripts/**/*.test.mjs"],
     globalSetup: ["src/lib/test/globalSetup.ts"],
     setupFiles: ["src/lib/test/setup.ts"],
     restoreMocks: true,

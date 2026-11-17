@@ -4,6 +4,7 @@ import { Outlet } from "react-router";
 import { useSnapshotSync } from "@/api/hooks";
 import { Button } from "@/components/Button";
 import { LoadingState } from "@/components/LoadingState";
+import { WhatsNew } from "@/features/whatsNew/WhatsNew";
 import styles from "./AppShell.module.css";
 import { NodeStatus } from "./NodeStatus";
 import { Sidebar } from "./Sidebar";
@@ -13,9 +14,9 @@ import { APP_NAME, usePageHeading } from "./usePageHeading";
 const PageHelp = lazy(() => import("./help/PageHelp").then((m) => ({ default: m.PageHelp })));
 
 /**
- * The frame of every screen: a skip link, the top bar with the node's state and the help
- * button, the side navigation, the screen and the help drawer. It keeps the snapshot current
- * for every page below it.
+ * The frame of every screen: a skip link, the top bar with the node's state, What's new and
+ * the help button, the side navigation, the screen and the help drawer. It keeps the snapshot
+ * current for every page below it.
  */
 export function AppShell() {
   useSnapshotSync();
@@ -39,6 +40,7 @@ export function AppShell() {
         <div className={styles.topBarEnd}>
           <NodeStatus />
           <SignedInAs />
+          <WhatsNew />
           <Button
             ref={helpTrigger}
             variant="quiet"

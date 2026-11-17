@@ -86,14 +86,79 @@ Documentation describes the current state. Update the affected specification, op
 and console help with behavior changes; avoid plans, diaries and duplicate implementation
 descriptions. Keep local investigation artifacts out of the repository.
 
+## Changelog entries
+
+The changelog has one Markdown file per change in [changelog.d/](changelog.d/). They
+generate [CHANGELOG.md](CHANGELOG.md) and the console's What's new list, so never edit
+`CHANGELOG.md` by hand.
+
+**When.** Add an entry in the same pull request as any change that users, deployers or
+integrators can observe: a feature, a behavior change, a fix, a removal, a security fix, a new
+or changed setting, migration, file format, installer or dependency that affects an
+installation. Refactors, tests, CI, internal documentation and changes only to `website/` need
+none; say "No changelog entry: nothing observable" in the pull request and a maintainer adds
+the `no-changelog` label.
+
+**File.** Name it `changelog.d/YYYY-MM-DD-short-slug.md` (today's date, lowercase slug):
+
+```markdown
+---
+date: 2026-11-17
+type: added
+impact: medium
+title: Find a message by its specimen identifier
+area: Messages
+link: /messages
+pr: 45
+---
+One to three plain sentences for the people who use the engine: what they can do now or what
+behaves differently, and where to find it.
+
+## Technical notes
+
+Optional: settings, schema or migration identifiers, dependencies, upgrade steps.
+```
+
+| Key | Required | Value |
+| --- | --- | --- |
+| `date` | yes | The day the change merges; for a new change, the day you write the entry. |
+| `type` | yes | `added`, `changed`, `fixed`, `removed`, `deprecated` or `security` ([Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/)). |
+| `impact` | yes | See below. |
+| `title` | yes | Sentence case, no trailing period, written for users. |
+| `area` | no | The part of the console users know it by: a navigation entry (Messages, Settings), or Engine, Command line, Installation, Documentation. |
+| `link` | no | The console route where it is found, such as `/settings/backup`; it must be a real route. |
+| `pr` | no | The pull request number, once known. |
+| `release` | no | Set only by the release step (below); leave it out. |
+
+**Impact.** `high`: a new capability or workflow, anything a user or deployer must act on, a
+change to how people work, a removal or a security fix. `medium`: a noticeable improvement to
+something that exists. `low`: small fixes and polish. Rate honestly; most changes are not high.
+
+**Wording.** Write the summary for laboratory staff in the console's voice: plain words, what
+they can do or what changed and where, no internal names. Commands and setting names go in
+backticks. Technical detail for deployers goes under `## Technical notes`, which the console
+leaves out. Synthetic data only; no names of other products, organizations or customers.
+
+**Regenerate and check.** In `console/`:
+
+```sh
+npm run changelog          # rewrite CHANGELOG.md from changelog.d/
+npm run changelog:check    # fail on an invalid entry or a stale CHANGELOG.md (CI runs this)
+```
+
+An invalid entry stops both with the file and key named. A branch that still edits
+`CHANGELOG.md` by hand: move each of its additions into an entry file, then run
+`npm run changelog` and keep the generated file. When two branches each add an entry, nothing
+conflicts except the generated file; after the merge, run `npm run changelog` again.
+
 ## Propose a change
 
 Open an issue for a substantial behavior or design change before implementing it. Open pull
 requests against `develop`, the integration branch; `main` is the release branch and receives
 `develop` by pull request ([branches](docs/development/README.md#branches-and-the-presentation-website)).
 Keep PRs small and focused. Include the problem and resulting behavior, affected specification or
-requirement, tests/checks run with results, documentation updates, new dependencies, and any
-remaining limits. Include a synthetic reproduction for a bug and a screenshot for a visible
+requirement, tests/checks run with results, documentation updates, the changelog entry (or why
+none is needed), new dependencies, and any remaining limits. Include a synthetic reproduction for a bug and a screenshot for a visible
 UI change. Never include patient information, real laboratory exports or credentials.
 
 ## License and development disclaimer

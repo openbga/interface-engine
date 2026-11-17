@@ -152,15 +152,28 @@ root. [Testing](../testing.md) defines the integration gate.
 | --- | --- |
 | [CI](../../.github/workflows/ci.yml): `rust` | Ubuntu workspace formatting, all-target clippy with warnings denied, locked tests. |
 | CI: `rust-cross` | Locked workspace all-target clippy and tests on macOS and Windows. |
-| CI: `console` | Node 24, `npm ci`, typecheck, lint, tests and production frontend build. |
+| CI: `console` | Node 24, `npm ci`, changelog check, typecheck, lint, tests and production frontend build. |
 | CI: `tauri` | Separate console Rust workspace: locked check and all-target clippy on Ubuntu. |
 | CI: `deny` | Dependency licenses and advisories through cargo-deny. |
+| [Changelog entry](../../.github/workflows/changelog.yml): `entry` | Pull requests that change engine, console or packaging source add a file under `changelog.d/`, unless labelled `no-changelog`; the develop-to-main pull request and Dependabot are exempt. |
 | [Scenarios](../../.github/workflows/scenarios.yml): `scenarios` | Ubuntu builds both binaries, runs all cases with `--jobs 4 --deny-skips --verbose`, publishes JUnit and retains failed state/log artifacts. |
 | [Publish presentation](../../.github/workflows/pages.yml): `deploy` | Uploads `website/` and deploys it to GitHub Pages; runs for website changes on `main`. |
 
 CI and Scenarios run for pushes to `main` and pull requests; Scenarios also supports manual
 dispatch. Performance targets are measured with `packie-sim bench` before a release; see
 [acceptance](../spec/acceptance.md#10-performance-security-packaging).
+
+Every observable change carries an entry in `changelog.d/`
+([Contributing](../../CONTRIBUTING.md#changelog-entries)); entries without a `release:` key are
+the Unreleased group of `CHANGELOG.md` and the console's What's new. To release, stamp them
+with the version being released (the workspace version in `Cargo.toml`) from `console/` and
+merge the result into `develop` before the pull request that takes `develop` to `main`:
+
+```sh
+npm run changelog -- --release 0.2.0   # adds `release: 0.2.0` to every unreleased entry, rewrites CHANGELOG.md
+```
+
+Entries merged later stay unreleased until the next release stamps them.
 
 [Release build](../../.github/workflows/release.yml) runs only through **Actions → Release
 build → Run workflow**. It builds the engine, Tauri bundle and installer for Linux x86_64,
