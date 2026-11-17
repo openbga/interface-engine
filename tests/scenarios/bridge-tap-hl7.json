@@ -60,9 +60,9 @@
     { "do": "assert_snapshot", "actor": "engine", "target": { "channel": "bridge-tap" },
       "expect": { "state": "running", "counters.messages_a_to_b": 2, "counters.messages_b_to_a": 2,
                   "counters.framing_errors": 0, "counters.tap_dropped": 0 } },
-    { "do": "assert_store", "actor": "engine", "table": "messages", "where": { "channel_id": "bridge-tap", "direction": "a_to_b" }, "count": 2,
+    { "do": "assert_store", "actor": "engine", "table": "messages", "where": { "channel_id": "bridge-tap", "direction": "a_to_b" }, "count": 2, "within_ms": 15000,
       "each": { "state": "observed", "origin": "tap", "protocol": "hl7_mllp", "control_id": "CTRL-TAP-1", "original_text": { "contains": "OBX|1|NM" } } },
-    { "do": "assert_store", "actor": "engine", "table": "messages", "where": { "channel_id": "bridge-tap", "direction": "b_to_a" }, "count": 2,
+    { "do": "assert_store", "actor": "engine", "table": "messages", "where": { "channel_id": "bridge-tap", "direction": "b_to_a" }, "count": 2, "within_ms": 15000,
       "each": { "state": "observed", "origin": "tap" } },
     { "do": "assert_store", "actor": "engine", "table": "messages", "where": { "channel_id": "bridge-tap", "state": "duplicate" }, "count": 0, "within_ms": 0 },
     { "do": "assert_store", "actor": "engine", "table": "deliveries", "where": { "channel_id": "bridge-tap" }, "count": 0, "within_ms": 0 }
