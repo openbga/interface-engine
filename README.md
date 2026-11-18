@@ -6,7 +6,7 @@
 [Contributing](CONTRIBUTING.md) ·
 [Security](SECURITY.md)
 
-OpenBGA Interface Engine is an open-source (AGPL-3.0-only) interface engine for clinical
+OpenBGA Interface Engine is a free, open-source (AGPL-3.0-only) interface engine for clinical
 laboratories: the middleware between analyzers, LIS/LIMS, EHRs and other applications.
 It receives and sends instrument traffic (ASTM, vendor protocols), exchanges HL7 v2 over
 MLLP, imports and exports files, bridges serial and TCP ports, and keeps a durable record
@@ -72,7 +72,8 @@ Community support is through [GitHub issues](https://github.com/openbga/interfac
 best-effort basis. Report vulnerabilities privately as the [security policy](SECURITY.md)
 describes. BGASoft offers optional paid support, implementation and validation; see
 [OpenBGA at BGASoft](https://bgasoft.com/openbga/) and
-[open-source support](https://bgasoft.com/services/open-source-support/).
+[open-source support](https://bgasoft.com/services/open-source-support/). Are you looking for
+support? Contact [bgasoft.com](https://bgasoft.com).
 
 ## License and development disclaimer
 
