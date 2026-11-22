@@ -4,6 +4,7 @@ type: fixed
 impact: low
 title: Help and guides corrected where they disagreed with the engine
 area: Documentation
+pr: 11
 ---
 The Connection help article now gives the console's actual reconnection timing: a first retry
 after about half a second, doubling to about 5 seconds. The operator guides were corrected in

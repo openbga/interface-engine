@@ -254,7 +254,7 @@ top, then by impact. Types follow [Keep a Changelog](https://keepachangelog.com/
 
 ### Low impact
 
-- **Fixed:** Help and guides corrected where they disagreed with the engine (2026-11-22)
+- **Fixed:** Help and guides corrected where they disagreed with the engine (2026-11-22, [#11](https://github.com/openbga/interface-engine/pull/11))
 
   The Connection help article now gives the console's actual reconnection timing: a first retry
   after about half a second, doubling to about 5 seconds. The operator guides were corrected in
