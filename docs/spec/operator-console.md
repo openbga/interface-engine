@@ -115,7 +115,7 @@ Rows sort by rank, then by the tie-break rules:
 | 5 | `running` with traffic in the last 60 s |
 | 6 | `running`, idle |
 | 7 | `starting` |
-| 8 | `stopped` (paused, disabled) |
+| 8 | `stopped` (any reason) |
 
 Tie-breaks inside a rank: channels with an error in the last 5 minutes above quiet ones, then
 the most recent error first, then label A to Z. A retrying channel never sorts below a

@@ -115,7 +115,7 @@ The release sentence of requirements.md, clause by clause.
 | E-02 | ASTM send of orders and queries | The engine runs the sender side (ENQ, frames, EOT) and records `received` on completion | PRO-01 | `msg-astm-receive-ack-after-commit`, `crate: packie-astm` |
 | E-03 | AU400/AU640 class A and B over serial and TCP; send worklists | Class B ACKs follow durable commit; incomplete samples abort; settings are frozen per receipt | PRO-02 | `crate: packie-au` |
 | E-04 | HL7 MLLP client and listener in both acknowledgement modes | Per-message acknowledgement tracking; mismatched acknowledgements are ignored and logged | PRO-03 | `msg-hl7-in-ack`, `msg-hl7-out-ack-tracked` |
-| E-05 | Delimited files in and out, grouped records, quoting | Columns and order as templated; completion detection; oversize file aborted | PRO-04 | `msg-hl7-out-ack-tracked`, `crate: packie-files` |
+| E-05 | Delimited files in and out, grouped records, quoting | Columns and order as templated; completion detection; oversize file aborted | PRO-04 | `msg-hl7-out-ack-tracked`, `crate: packie-files`, `crate: packie-transport` |
 | E-06 | Raw bytes through bridges and taps | No parsing; counters and observed messages work with a framer | PRO-05 | `bridge-tcp-full-duplex`, `bridge-tap-hl7` |
 | E-07 | Conformance corpora including malformed and truncated input; property tests on framing and escaping | Typed errors for malformed input, never a panic, for every protocol | PRO-06 | `crate: packie-astm`, `packie-au`, `packie-hl7`, `packie-files` |
 

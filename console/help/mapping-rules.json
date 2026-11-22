@@ -7,7 +7,7 @@
     {
       "title": "Rules",
       "paragraphs": [
-        "A destination's rules run from top to bottom and build a new message, which starts empty apart from generated header fields. copy writes the text at From to To, with a default for an empty source and Required to fail the message when it is empty. constant writes fixed text, concat joins paths and text, datetime reformats a date, calculate works out a number, when runs its rules if a condition holds. A message that fails a rule is kept and shows as failed; fix the mapping, apply, then resend."
+        "A destination's rules run from top to bottom and build a new message, which starts empty apart from generated header fields, or as a copy of the source when both are HL7 or both ASTM. copy writes the text at From to To, with a default for an empty source and Required to fail the message when it is empty. constant writes fixed text, concat joins paths and text, datetime reformats a date, calculate works out a number, when runs its rules if a condition holds. A message that fails a rule is kept and shows as failed; fix the mapping, apply, then resend."
       ]
     },
     {
