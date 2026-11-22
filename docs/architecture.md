@@ -101,7 +101,7 @@ How OpenBGA Interface Engine is built. Behavior details per area live in `docs/s
 | ASTM E1381 / E1394 (LIS01-A2 / LIS02-A2) | `packie-astm` | receive results, send orders/queries | Frame layer with checksum, ACK/NAK/EOT, retransmission, contention; record layer H/P/O/R/C/Q/L with field accessors. |
 | AU400 / AU640 | `packie-au` | receive results, send worklists | Fixed-width records. |
 | HL7 v2.x | `packie-hl7` | MLLP client and listener; ORU, ORM/OML, ORL, ACK, ADT as generic messages | Generic segment/field/component model with escaping; typed helpers; ACK generation in original and enhanced modes; MLLP streaming framer. Message version from MSH-12. |
-| Delimited files | `packie-files` | read and write | Templates: delimiter, quoting, header row, column→field mapping, one record per line or grouped. The folder and SFTP transports in `packie-transport` detect a complete file (stable size and ignored suffixes; the folder transport also checks that no writer holds the file open). |
+| Delimited files | `packie-files` | read and write | Templates: delimiter, quoting, header row, column→field mapping, one record per line or grouped. The folder and SFTP transports in `packie-transport` decide when a file is complete (`stable_seconds`, `ignore_suffixes` and, for folders, `exclusive_open_check`). |
 | Raw | `packie-routing` | bridges, taps | No parsing. |
 
 Transformation model (`packie-transform`): a message's parsed model is addressed by paths
@@ -169,6 +169,7 @@ restricted secrets file; never stored in the documents.
 | `packie-audit` | Append-only, hash-chained audit log in `<state>/audit` (its own SQLite files and writer), review queries, export, chain verification, yearly sealing and retention ([spec/audit.md](spec/audit.md)) | core, ipc |
 | `packie-backup` | Backup (store snapshot, bodies, audit, configuration, SHA-256 manifest), verification, restore with the engine stopped, schedule and status ([spec/backup.md](spec/backup.md)) | audit, config, core, host, ipc, store |
 | `packie-diagnostics` | Tracing setup, ring buffer, snapshots, alerts, counters, traffic tap | core, config (alert thresholds) |
+| `packie-notify` | Alert notifications by e-mail and webhook: severity routing, rate limiting, failing-target tracking ([spec/diagnostics.md §6.1](spec/diagnostics.md#61-notifications)) | config, core, diagnostics |
 | `packie-routing` | Channel supervisors, bridge sessions and buffers, message pipeline, retry policy, connectors, store opening with retry; implements `packie_engine::ChannelRegistry` | astm, au, config, core, diagnostics, engine (registry contract), files, hl7, ipc, store, transform, transport |
 | `packie-ipc` | IPC protocol DTOs (ts-rs), framing, server and client | core, config, diagnostics |
 | `packie-engine` | Composition: loads config, starts diagnostics and IPC, opens audit through the host-supplied opener, schedules backups, publishes snapshots, applies config to the `ChannelRegistry` its host supplies | astm, backup, config, core, diagnostics, hl7, ipc, notify, transform |

@@ -116,7 +116,7 @@ that endpoint's `settings`.
 | `label` | Required | Display label. |
 | `enabled` | `true` | Boolean; `false` prevents opening the endpoint. |
 | `kind` | Required | `serial`, `tcp_client`, `tcp_listener`, `folder`, `sftp`. |
-| `settings` | `{}` | Object for the chosen kind; its required fields still apply. |
+| `settings` | Required | Object for the chosen kind. |
 | `tags` | `{}` | Up to 20 string-to-string metadata entries. |
 
 ### Serial settings

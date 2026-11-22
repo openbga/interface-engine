@@ -17,7 +17,7 @@ deliveries needing attention, message-store state and free disk space.
 | --- | --- |
 | Running (`healthy` in `packie status`) | The engine has an active configuration and usable store, disk is above the critical limit, and enabled channels are running or starting. |
 | Needs attention (`degraded`) | A channel needs recovery, the store is unavailable, disk is critically low, or no valid configuration is active. Open the alerts and affected channel. |
-| Stopping (`stopped`) | Shutdown has completed. |
+| Stopping (`stopped`) | Shutdown has completed; this is the engine's final state before it exits. |
 
 Paused and disabled channels do not by themselves make the engine degraded. A healthy
 engine can still have deliveries needing an operator's decision.
