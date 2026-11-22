@@ -7,7 +7,7 @@ backticks are files in [`tests/scenarios/`](../../tests/scenarios/) described in
 [scenarios.md](scenarios.md).
 
 **Verified by** values: a scenario name; `crate: <name>` (the crate's own tests, including
-conformance corpora); `console smoke` (page smoke journey against a simulator-backed engine,
+conformance corpora); `console smoke` (browser journeys on the mock engine,
 [testing.md](../testing.md)); `benchmark` (the `packie-sim` benchmark scenario, run at the
 gate); `install test` (per-OS installer check); `inspection` (a reviewed property such as a
 permission or an absent port).

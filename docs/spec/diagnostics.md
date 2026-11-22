@@ -86,7 +86,7 @@ active configuration; the published value and the engine's internal value never 
 | `retry_count` | integer | Bridge: section 7 of bridge-channels. Message: retry count of the source endpoint cycle. |
 | `next_retry_at` | string or null | Set while a retry waits; null during an attempt and while running. |
 | `last_error` | object or null | Operator-facing last error: `at`, `summary`, `next_action` (string or null); see [section 7.4](#74-error-summaries). |
-| `recent_errors` | array | The last 100 errors in the same shape, oldest first. |
+| `recent_errors` | array | The last `diagnostics.retain_recent_errors` errors (default 100) in the same shape, oldest first. |
 | `allowed_actions` | array | Operator commands whose preconditions hold now: `pause`, `resume`, `restart`. |
 | `bridge`, `message` | object or null | Detail for the channel's kind (sections 4.2 and 4.3); the other is null. |
 
@@ -330,7 +330,7 @@ Levels are as emitted; a row with two levels names both.
 | `config.applied` | info | Apply result | `config_version`, `result`, `added`, `restarted`, `updated`, `removed`, `stopped` |
 | `config.rejected` | warn | An apply was rejected; the runtime file was invalid at startup | `errors` (count); `file`, `error` at startup |
 | `config.imported`, `config.empty` | info, warn | Startup used the runtime file as a new version; there is no configuration | `file`, `config_version` |
-| `config.version_skipped`, `config.prune_failed`, `config.save_failed` | warn, warn, error | A saved version was unusable; an old version could not be removed; a version could not be saved | `config_version` or `path`, `error` |
+| `config.version_skipped`, `config.prune_failed`, `config.save_failed` | warn, warn, error (warn when only the apply outcomes could not be saved) | A saved version was unusable; an old version could not be removed; a version or its apply outcomes could not be saved | `config_version` or `path`, `error` |
 | `config.replacement_not_ready` | warn | A replacement instance did not pair in time and takes over anyway | `channel_id` |
 | `secrets.unavailable` | warn | Secret names could not be listed to check references | `error` |
 | `channel.started` | info | Instance created | `config_version` |
@@ -394,7 +394,7 @@ Levels are as emitted; a row with two levels names both.
 | `notification.ca_invalid` | warn | At start, `notifications.ca_file` cannot be read or holds no usable certificate; TLS sends fail naming the file | `ca_file`, `error_summary` |
 | `backup.pruned` | info | An old scheduled backup was removed | `directory` |
 | `backup.status_unwritten` | warn | The attempt status could not be saved; this does not fail the backup | `error` |
-| `backup.undo_failed` | error | A failed restore could not remove partial state or put previous state back | `path` (directory operations), `error` |
+| `backup.undo_failed` | error; warn when only the final sync of the state directory failed | A failed restore could not remove partial state or put previous state back | `path` (directory operations), `error` |
 | `routing.paused_unreadable`, `routing.paused_not_saved` | warn | The paused-channel list could not be read or saved | `path`, `error` |
 | `ipc.group_unavailable` | warn | The socket could not be given to `ipc.group` and stays owner-only | `group`, `error_summary` |
 | `ipc.connected` | info | A management connection was accepted; its OS account is read from the connection (Unix peer credentials, the Windows pipe client's token) | `operator_account`, `uid_or_sid`, `pid` |
@@ -402,7 +402,7 @@ Levels are as emitted; a row with two levels names both.
 | `ipc.hello`, `ipc.client_disconnected`, `ipc.read_failed`, `ipc.write_failed`, `ipc.pipe_busy` | debug | Management-interface client lifecycle and I/O | `client`, `operator_account`, `origin` (hello), `error` |
 | `host.eventlog_failed`, `host.service_failed`, `host.engine_failed`, `host.status_failed` | warn, error, error, warn | Windows service hosting failures | `error_summary` |
 | `alert.raised`, `alert.cleared` | warn, info | Alert change | `alert_id`, `code`, `severity` (raised), `channel_id`, `endpoint_id` |
-| `operator.command` | info | An operator command was answered | `command` (`apply_config`, `validate_config`, `pause_channel`, `resume_channel`, `restart_channel`, `resend`, `close_delivery`, `set_secret`, `delete_secret`), `result` (`accepted`, `rejected`, `failed`), `operator_account` and `uid_or_sid` (the OS account behind the connection), `origin` (the client kind named in its hello: `console`, `cli`, `sim`; `unknown` without one; a label, not an identity); free-text reasons are logged by length only (`reason_length`) |
+| `operator.command` | info | An operator command was answered | `command` (`apply_config`, `validate_config`, `pause_channel`, `resume_channel`, `restart_channel`, `resend`, `close_delivery`, `verify_config_version`, `set_secret`, `delete_secret`, `test_endpoint`, `test_notification`), `result` (`accepted`, `rejected`, `failed`), `operator_account` and `uid_or_sid` (the OS account behind the connection), `origin` (the client kind named in its hello: `console`, `cli`, `sim`; `unknown` without one; a label, not an identity); free-text reasons are logged by length only (`reason_length`) |
 
 The message store logs its own lines for `message.frame_committed`, `message.committed`,
 `message.identity_reused`, `message.aborted` and the `delivery.*` events `attempt_started`,

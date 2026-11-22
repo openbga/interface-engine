@@ -67,7 +67,7 @@ Allow shutdown to finish: the service manager permits the configured drain time 
 The service manager restarts the engine after a failure, but not after a configuration error
 (exit code 2: an invalid bootstrap or an unusable secret store), which would only repeat. On
 Linux the unit stays `failed` (`RestartPreventExitStatus=2`) and `journalctl -u packie` shows the
-reason; on macOS the daemon stops and the reason is in `/var/log/packie/launchd.stderr.log`; on
+reason; on macOS the daemon stops and the reason is in `/Library/Logs/Positive ACK/launchd.stderr.log`; on
 Windows the service stops with an Application event-log error (source `packie`, ID 3) naming the
 reason. Fix the bootstrap, then start the service again.
 

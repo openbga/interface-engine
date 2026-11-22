@@ -37,7 +37,7 @@ object, rather than complete JSON paths.
 | `diagnostics.snapshot_interval_seconds` | `1` | Integer, 1–60. |
 | `diagnostics.retain_recent_errors` | `100` | Integer, 10–10,000 per channel. |
 | `secrets.provider` | `keystore` (macOS, Windows); `file` (Linux) | `keystore` or `file`. On Linux `keystore` needs a Secret Service (desktop session); without one the engine refuses to start and names `file`. The Linux package sets `file`. |
-| `secrets.file` | `<state_directory>/secrets.json` with `provider=file` | Secret-store file path; created owner-only on the first secret write; on Unix, group and others must have no read access. |
+| `secrets.file` | `<state_directory>/secrets.json` with `provider=file` | Secret-store file path; created owner-only on the first secret write; on Unix, group and others must have no permission bits. |
 | `audit.retention_days` | `2190` | Integer, 365–36,500. Removes whole sealed yearly audit files only after their newest event ages out; records the removal. Keep at least as long as the longest message retention and the lab's required calendar interval. |
 | `backup.directory` | Not set | Backup root; required with a schedule. Each default/scheduled backup uses a new `packie-backup-<UTC time>` directory. Use an encrypted volume writable by the service account. |
 | `backup.schedule` | `null` | No automatic backup; otherwise an object with `daily_at` and optional `keep` below. |
@@ -116,7 +116,7 @@ that endpoint's `settings`.
 | `label` | Required | Display label. |
 | `enabled` | `true` | Boolean; `false` prevents opening the endpoint. |
 | `kind` | Required | `serial`, `tcp_client`, `tcp_listener`, `folder`, `sftp`. |
-| `settings` | Required | Object for the chosen kind. |
+| `settings` | `{}` | Object for the chosen kind; its required fields still apply. |
 | `tags` | `{}` | Up to 20 string-to-string metadata entries. |
 
 ### Serial settings
@@ -267,8 +267,8 @@ produces an unbounded-retention warning.
 
 | Protocol | Allowed endpoint kinds | Default / highest `ack_required` |
 | --- | --- | --- |
-| `astm`, `au` | `serial`, `tcp_client`, `tcp_listener` | `received` / `received` |
-| `hl7_mllp` | `tcp_client`, `tcp_listener` | `accepted` / `accepted` |
+| `astm`, `au` | `serial`, `tcp_client`, `tcp_listener` | `received` / `received`; `au` class `a`: `handed_off` |
+| `hl7_mllp` | `tcp_client`, `tcp_listener` | `accepted` / `accepted`; `handed_off` with `ack_mode: none` |
 | `delimited_file` | `folder`, `sftp` | `handed_off` / `handed_off` |
 
 ### Delivery policy fields
@@ -295,14 +295,14 @@ Fields belong to source or destination connector `settings`.
 | `ack_timeout_ms` | `15000` | Integer, 1000–120,000. |
 | `receive_timeout_ms` | `30000` | Integer, 1000–300,000. |
 | `max_frame_retries` | `6` | Integer, 0–20. |
-| `max_frame_chars` | `240` | Integer, 64–240. |
+| `max_frame_chars` | `240` | Integer, 64–64,000; 240 is the E1381 limit, larger values are long frames. |
 | `contention_wait_ms` | `20000` | Integer, 1000–60,000. |
 | `max_message_bytes` | `1048576` | Integer, 1024–67,108,864. |
 
 ### AU (`au`)
 
 Use the instrument's online parameter sheet. All fields are required except
-`block_timeout_ms`.
+`block_timeout_ms` and `format.test_code_digits` (`2` or `3`, default `2`).
 
 | Field | Default | Value or purpose |
 | --- | --- | --- |
@@ -376,7 +376,7 @@ fields, components and subcomponents start at 1. AU fields are read-only.
 | ASTM | `R[occ].field[rep].component` (record letters `H P O R C Q M L`) |
 | AU | Header name or `test[occ].name` |
 | Delimited file | `col[occ].name` |
-| Current loop occurrence | `$.` plus field/component or field name; only inside `for_each`. |
+| Current loop occurrence | `$.` plus field/component or field name; only inside `for_each`, `append` or a `calculate` `find`. |
 
 ### Expression fields
 
@@ -404,7 +404,7 @@ fields read as empty text. Non-decimal field text fails every numeric comparison
 | Field | Default | Value or purpose |
 | --- | --- | --- |
 | `tables` | `{}` | Named code tables, each mapping strings to strings. |
-| `rules` | Required | Ordered rule array; output begins with generated protocol headers. |
+| `rules` | Required | Ordered rule array; an HL7 or ASTM target of the same protocol starts as a copy of the source, otherwise output begins with generated protocol headers. |
 
 | Rule `op` | Required fields | Optional fields and defaults |
 | --- | --- | --- |
@@ -415,7 +415,7 @@ fields read as empty text. Non-decimal field text fails every numeric comparison
 | `datetime` | `from`, `to`, `input`, `output` | `from_timezone`, `to_timezone`: IANA names; conversion requires both. |
 | `when` | `condition`, `then` | `else`; branches contain rule arrays. |
 | `for_each` | `over`, `into`, `rules` | Record names identify input/output occurrences; loops cannot nest. |
-| `sequence` | `to` | `start=1`, integer 0–999,999,999; only inside `for_each`. |
+| `sequence` | `to` | `start=1`, integer 0–999,999,999; only inside `for_each` or `append`. |
 
 Date/time tokens are `yyyy`, `yy` (1970–2069), `MM`, `dd`, `HH`, `mm`, `ss`. Tokens are
 fixed-width and may appear only once per format; quote literal letters with single quotes.

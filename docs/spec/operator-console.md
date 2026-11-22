@@ -64,7 +64,7 @@ An intentionally stopped channel is never styled as a failure. A channel with an
 | `listening` | `neutral` | circle with a dot, "Listening" (with "waiting for peer" when no peer) |
 | `connecting` | `info` | spinner, "Connecting" |
 | `retrying` | `warning` | circular arrow, "Retrying" |
-| `disconnected` | `neutral` | hollow circle, "Disconnected" |
+| `disconnected` | `neutral` | dashed circle, "Disconnected" |
 | `error` | `danger` | cross, "Error" |
 | `disabled` | `neutral` | dash, "Disabled" |
 
@@ -201,8 +201,8 @@ flags for content export, duplicate risk, superseded messages and restore.
 | `restart_channel` (`channel_command: restart`) | channel | Exists; enabled; not operator-paused; runner available; engine not shutting down | Yes: the session closes and counters of the instance reset | New instance from the active definition |
 | `resend` | message, destinations, mode, optional reason | Readable store; message belongs to a configured message channel; destinations and states satisfy [message-channels.md §9](message-channels.md#9-resend-and-close); optional reason is 1–500 trimmed characters; a superseded message needs `confirm_superseded` | The dialog explains both modes; duplicate risk requires a checkbox | Per-destination result list; `new_message_id` when a new message was created |
 | `close_delivery` | delivery, reason | Readable store; delivery exists in `queued`, `rejected`, `failed`, `timed_out` or `outcome_unknown`; reason is 1–500 trimmed characters | Yes: "Closing does not contact the destination" | Delivery `cancelled` with the reason |
-| `export_messages` | filter, format, optional original bodies | Readable store; valid message filter | CLI/IPC operation | Export chunks and matching count (section 6) |
-| `verify_transmission` | channel id, period | Readable store; valid period; the channel id filters stored messages and need not remain configured | CLI/IPC operation | Per-destination report and up to 10,000 delivery rows |
+| `export_messages` | filter, format, optional original bodies | Readable store; valid message filter | The Export dialog restates the filters and the matching count and warns about identifiers; content only when ticked | Export chunks and matching count (section 6) |
+| `verify_transmission` | channel id, period | Readable store; valid period; the channel id filters stored messages and need not remain configured | No | Per-destination report and up to 10,000 delivery rows |
 | `create_backup` | directory, or configured backup directory | New or empty absolute directory, or `backup.directory` set; the engine's backup service available | Yes for Back up now; uses `backup.directory` | Directory, files, size and audit head |
 | `validate_config` | document | None beyond a writable audit log over IPC; CLI validation is offline | No | Problems and the per-channel plan (`added`, `changed`, `updated`, `removed`, `unchanged`, `stopped` for channels the document disables); the plan is always present and empty when the document has errors; nothing changed |
 | `apply_config` (`put_config`) | document, `base_version`, note | Valid document; base equals active version; note is 1–500 trimmed characters | Yes: shows changed and untouched channels | New active version and per-channel outcomes, including partial failures; validation/conflict/save failures leave the previous version active |
@@ -373,7 +373,8 @@ Structured viewer over the engine's in-memory log ring ([diagnostics.md](diagnos
 the most recent `logging.ring_buffer_events` events since the engine started. Older history
 is in the log files under the log directory, which the viewer does not read.
 Filters: level (at or above), time range, channel, endpoint, event, text. Follows live by
-default; scrolling up pauses following and shows "Jump to live". A row expands to its fields;
+default; the list is newest first, and scrolling away from the newest event or opening a row
+pauses following and shows "Jump to live". A row expands to its fields;
 channel and endpoint fields link to their pages. The viewer keeps a bounded window (10,000
 rows) and queries older ring entries with `before_seq`; reconnect backfill uses
 `after_seq` (decision 20). Message bodies are never in logs, so none
@@ -416,7 +417,7 @@ show the active counts.
     raises `notifications_failing`.
   - **Privacy**: idle protection, a setting of this console on this computer (not of the
     engine): after 1–240 minutes without activity (default 15) bodies, parsed fields and
-    audit details are hidden behind "Show again". There is no login; it does not lock the
+    audit details are hidden until the operator chooses "Continue". There is no login; it does not lock the
     computer.
 - **Audit**: the audit log ([audit.md](audit.md)) as a grid, newest first, filtered by time,
   account, action, origin, outcome and object; a row opens the event's details; export (CSV,

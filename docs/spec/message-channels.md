@@ -455,8 +455,10 @@ Steps, in order, each idempotent:
    The attempt record is committed before the first byte is written, so a delivery never
    starts sending without a record. Counted `unknown`.
 4. **Queue.** Deliveries in `queued` are kept in receipt order with their `next_attempt_at`.
-5. **Paused channels.** The stored operator-paused flags are restored; those channels stay
-   stopped.
+5. **Paused channels.** Operator pause flags are not in the store: the registry reads them
+   from `<state>/routing/paused.json`
+   ([bridge-channels.md §12](bridge-channels.md#12-startup-and-operator-stop)); those channels
+   stay stopped.
 6. **Report.** One `reconciliation.completed` event with the counts; each `unknown` delivery
    is visible through `delivery_needs_attention`, each aborted transfer through its message.
    Alerts are recomputed from the store on the first snapshot.
@@ -489,10 +491,10 @@ follow.
 
 Per message channel and per destination (full schema in
 [diagnostics.md](diagnostics.md#4-channel-snapshots)): `received`, `duplicates`, `invalid`,
-`filtered`, `aborted`, `bytes_in`; per destination `queued`, `sending`, `acknowledged`,
-`rejected`, `timed_out`, `outcome_unknown`, `failed` (of which `transform_errors` failed in
-their mapping), `cancelled`, `oldest_queued_at`, `next_attempt_at`, `last_ack_at`,
-`last_error_summary`.
+`filtered`, `aborted`, `bytes_in`; per destination `queued`, `sending`, `oldest_queued_at`,
+`next_attempt_at`, `attempts`, `acknowledged`, `rejected`, `timed_out`, `outcome_unknown`,
+`failed` (of which `transform_errors` failed in their mapping), `bytes_out`,
+`last_attempt_at`, `last_ack_at`, `last_error`.
 
 ## 16. Non-goals
 

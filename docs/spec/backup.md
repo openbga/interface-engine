@@ -57,7 +57,7 @@ Endpoints that need a missing secret report it and connect once it is set.
 | Engine stopped | `packie backup create` takes the instance lock (so no engine can start meanwhile), opens the audit log itself and works offline. |
 | Durability | Configuration/reference files and the manifest are explicitly synced. On Unix, every copied file is synced before the manifest names it. |
 | Failure | After the target is accepted, a failed backup attempts to remove what it wrote (the whole directory when it created it) and records the failure in the status. Cleanup failures are logged. Target-validation failures do not update the status. |
-| Audit | Manual creation records `backup_create`, `requested` before and the outcome after; refused when the request cannot be recorded ([audit.md §7](audit.md#7-availability-and-fail-closed-commands)). A lost outcome is logged without failing the backup. Scheduled creation records its outcome after the copy and proceeds even when the audit log cannot be written. |
+| Audit | Manual creation records `backup_create`, `requested` before and the outcome after; refused when the request cannot be recorded ([audit.md §7](audit.md#7-availability-and-fail-closed-commands)). A lost outcome is logged (over IPC) or printed as a warning (offline CLI) without failing the backup. Scheduled creation records its outcome after the copy and proceeds even when the audit log cannot be written. |
 | Status | Accepted backup attempts update `<state>/backup/status.json` (newest attempt and newest success, with the summary). A status-write failure is logged without failing the backup. |
 
 ## 3. Verifying

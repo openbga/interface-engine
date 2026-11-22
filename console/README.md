@@ -13,9 +13,9 @@ npm run tauri dev     # the desktop window, attached to the engine
 npm run dev           # the same UI in a browser at http://localhost:5174, on mock data
 ```
 
-The window finds the engine like the `packie` CLI does: an override saved by the shell, then
-`PACKIE_IPC` (socket path or pipe name), then the bootstrap file named by `PACKIE_BOOTSTRAP` or the
-nearest `config/bootstrap.json` above the working directory. Start an engine first, from the
+The window finds the engine in this order: an override saved by the shell, `PACKIE_IPC` (socket
+path or pipe name), the bootstrap file named by `PACKIE_BOOTSTRAP`, the installed engine's
+bootstrap file, then the nearest `config/bootstrap.json` at or above the working directory. Start an engine first, from the
 repository root: `cargo run -p packie -- run --bootstrap config/bootstrap.json`. Without one the
 console says so, keeps trying, and continues when the engine appears.
 
@@ -32,8 +32,8 @@ cargo check --manifest-path src-tauri/Cargo.toml
 ```
 
 Browser journeys (Playwright, chromium only) drive the pages against the mock engine and prove
-the console acceptance rows H-01..H-09, D-08, D-12 and the console half of I-03 (docs/spec/acceptance.md §9). One
-spec file per area in `e2e/`, each test named by its row:
+the console acceptance rows H-01..H-09, D-08, D-12 and the console half of I-03 (docs/spec/acceptance.md §5, §9, §10). Spec
+files are grouped by area in `e2e/`, each test named by its row:
 
 ```sh
 npx playwright install chromium   # once
@@ -77,10 +77,10 @@ PACKIE_LIVE_IPC=/path/to/state/packie.sock PACKIE_LIVE_HL7_PORT=5401 PACKIE_LIVE
 | --- | --- |
 | `src/api/` | `EngineApi` (the only way pages reach the engine), the console's DTO types, query hooks. `ipc/` implements it over the Tauri commands and maps the engine's generated types (`src/ipc/generated/`) onto the console's; `mock/` implements it with synthetic data. `createEngineApi()` in `index.ts` picks one. |
 | `src/components/` | UI kit: domain-free components with tests. |
-| `src/features/` | One folder per area; features never import each other. |
+| `src/features/` | One folder per area; `shared-operate/` holds what the operate screens share. |
 | `src/app/` | Shell, navigation, routes, help drawer. |
 | `src/lib/` | Formatting, error handling, state wording (`status.ts`), test helpers. |
-| `help/` | One JSON file per page: the text of the help drawer. |
+| `help/` | One JSON file per help article (a page or a topic): the text of the help drawer. |
 | `src-tauri/` | Tauri shell; its own Cargo workspace root, not part of the engine workspace. Holds the one engine connection (reconnects with backoff, resubscribes) and exposes it as `ipc_*` commands and `packie://event` / `packie://connection` events. It also shows the native save dialog and writes the file the operator chose: the engine's chunks of an audit export (`save_audit_export`) or a message export (`save_message_export`, with or without bodies), and a report the window built itself, such as the change report or a transmission CSV (`save_report_file`). Files are created exclusively and owner-only from the first byte: an existing file is never replaced or followed (the export goes to the first free `name-1.ext`, and the notice names it), and a failed export leaves no partial file. The window never names a path and has no file system permission. The change report is recorded in the engine's audit log (`record_client_export`) before it is written. |
 
 Generated IPC types go to `src/ipc/generated/` (owned by the engine's `packie-ipc` export).

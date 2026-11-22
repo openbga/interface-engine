@@ -135,7 +135,7 @@ uses this retention setting, with background maintenance disabled for the short 
 | Lost outcome | When the outcome event after an audited IPC request cannot be written, its result is still returned; the `requested` event shows that it was attempted, without a recorded outcome. `audit.write_failed` is logged. Offline backup creation likewise returns its result and prints a warning if its outcome cannot be recorded. |
 | Alert | A failed write on an opened log marks it unavailable: `audit_unavailable` (critical) is raised and `audit.unavailable` logged. The next successful write clears it; maintenance retries every minute, and every audited command tries again. |
 | Traffic | Message traffic never waits on the audit log. |
-| Start | An audit log that cannot be opened at start does not stop the engine: it uses an unavailable fallback until restart; audited requests remain refused. |
+| Start | An audit log that cannot be opened at start does not stop the engine: it starts unavailable, audited requests are refused, and every audited command and the minute maintenance try to open it again. |
 | Scheduled backups | A scheduled backup still runs when the audit log is unavailable; writing its single outcome is best effort. Engine start and stop records are also best effort. |
 
 ## 8. Review

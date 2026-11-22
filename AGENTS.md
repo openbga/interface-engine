@@ -24,10 +24,12 @@ store every message durably, transform it and deliver it to one or more destinat
 3. **Dependencies:** prefer crates and packages already in the workspace. Add others
    deliberately, AGPL-3.0-compatible, maintained, no telemetry; name every new one in the
    pull request. Do not vendor code.
-4. **Documentation describes the current state only.** When you change behavior, change the
-   doc that describes it in the same change (`docs/`, `docs/spec/`, console help text). No
-   plans, diaries, reports or screenshots in the repository; `.local/` is ignored for those.
-   `STATUS.md` is one page that is replaced, not appended to.
+4. **Documentation describes the current state only.** When documentation and code disagree,
+   the code is right. Follow the code and correct or delete the documentation. When you
+   change behavior, change the doc that describes it in the same change (`docs/`,
+   `docs/spec/`, console help text). No plans, diaries, reports or screenshots in the
+   repository; `.local/` is ignored for those. `STATUS.md` is one page that is replaced, not
+   appended to.
 5. **Testing is designed with the code, not sprinkled after every edit.** Each crate carries
    its tests; protocol crates carry a conformance corpus; integration goes through the
    simulator scenarios. Run scoped checks (`cargo test -p <crate>`,

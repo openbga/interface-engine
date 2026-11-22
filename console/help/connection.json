@@ -7,7 +7,7 @@
     {
       "title": "When the engine is not running",
       "paragraphs": [
-        "The console shows The engine is not running, where it looked and why the last attempt failed. It keeps trying by itself, first after 1 second and then at doubling intervals up to 10 seconds, and carries on as soon as an engine answers. Start the service runs the installed service's start command. That needs administrator rights, so from a normal account it may be refused (on macOS it can start a per-user agent instead): the page shows the command to run in an administrator terminal."
+        "The console shows The engine is not running, where it looked and why the last attempt failed. It keeps trying by itself, first after about half a second and then at doubling intervals up to about 5 seconds, and carries on as soon as an engine answers. Start the service runs the installed service's start command. That needs administrator rights, so from a normal account it may be refused (on macOS it can start a per-user agent instead): the page shows the command to run in an administrator terminal."
       ]
     },
     {

@@ -241,10 +241,10 @@ These steps check the system daemon that the `.pkg` installs. A user agent (`ser
 - [ ] M5a. Break the bootstrap (for example set `"node_id": "Bad Id"`), run
   `sudo packie --bootstrap "/Library/Application Support/Positive ACK/bootstrap.json" service stop`
   and `… service start`, wait 30 seconds, then repeat M2.
-  Expected: `stopped`, not relaunched; `/var/log/packie/launchd.stderr.log` ends with the
+  Expected: `stopped`, not relaunched; `/Library/Logs/Positive ACK/launchd.stderr.log` ends with the
   `node.node_id` error and "the service is not restarted until this is fixed". Restore the
   bootstrap and start again.
-- [ ] M6. Run `sudo packaging/macos/uninstall.sh` from a checkout, or the copy shipped with the release.
+- [ ] M6. Run `sudo packaging/macos/uninstall.sh` from a checkout.
   Expected: `packie service status` then prints `Not installed`, and the state under
   `/Library/Application Support/Positive ACK/state` is kept.
 
