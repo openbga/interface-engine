@@ -35,7 +35,7 @@ interprocess = { version = "2.4.7", features = ["tokio"] }
 jiff = { version = "0.2.39", features = ["serde"] }
 keyring = "4.2.0"
 # SMTP alert e-mail; rustls only (no OpenSSL, no native-tls).
-lettre = { version = "0.11.23", default-features = false, features = ["builder", "smtp-transport", "tokio1", "tokio1-rustls-tls"] }
+lettre = { version = "0.11.24", default-features = false, features = ["builder", "smtp-transport", "tokio1", "tokio1-rustls-tls"] }
 notify = "8.2.1"
 nix = { version = "0.31.3", default-features = false, features = ["user"] }
 # Reads secret values from the terminal without echo (`packie secrets set`).
