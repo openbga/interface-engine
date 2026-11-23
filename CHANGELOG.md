@@ -21,7 +21,8 @@ top, then by impact. Types follow [Keep a Changelog](https://keepachangelog.com/
 
   `lettre` 0.11.23 → 0.11.24 (RUSTSEC-2026-0560 to RUSTSEC-2026-0565) and `url` 2.5.8 → 2.5.9
   (RUSTSEC-2026-0592), in the engine and the console's lock files. The workspace now requires
-  `lettre` 0.11.24 or later.
+  `lettre` 0.11.24 or later. The console also takes `cookie` 0.18.3 (RUSTSEC-2026-0594), a
+  dependency of its desktop framework.
 
 - **Changed:** The product is now called OpenBGA Interface Engine (2026-11-17, [#3](https://github.com/openbga/interface-engine/pull/3))
 
