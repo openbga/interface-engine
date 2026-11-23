@@ -6,9 +6,23 @@
 What changed in OpenBGA Interface Engine, grouped by release with unreleased changes on
 top, then by impact. Types follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Unreleased (2026-11-12 to 2026-11-20)
+## Unreleased (2026-11-12 to 2026-11-23)
 
 ### High impact
+
+- **Security:** Safer e-mail notifications (2026-11-23)
+
+  The component that sends alert e-mails was updated to fix reported security problems. A hostile
+  or compromised mail server could fake replies, exhaust the engine's memory or interrupt sending,
+  and some addresses could receive a message meant for another. No setting changes; notifications
+  work as before.
+
+  Technical notes:
+
+  `lettre` 0.11.23 → 0.11.24 (RUSTSEC-2026-0560 to RUSTSEC-2026-0565) and `url` 2.5.8 → 2.5.9
+  (RUSTSEC-2026-0592), in the engine and the console's lock files. The workspace now requires
+  `lettre` 0.11.24 or later. The console also takes `cookie` 0.18.3 (RUSTSEC-2026-0594), a
+  dependency of its desktop framework.
 
 - **Added:** Read PDF reports and send them on as HL7 messages (2026-11-19)
 
