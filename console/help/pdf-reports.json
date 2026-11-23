@@ -7,8 +7,8 @@
     {
       "title": "The template",
       "paragraphs": [
-        "A PDF report source reads report files, one message per file. Its template (a JSON object) lists the fields to read: the label printed on the report and whether the value is right of it or below. Start from the newborn screening preset.",
-        "A value the report does not print is empty. A report whose labels do not match is stored invalid with the reason and nothing is sent; correct the template and resend it as a new message.",
+        "A PDF report source reads report files, one message per file. Its template (a JSON object) lists the fields to read: the label on the report and whether the value is right of it or below. Start from the newborn screening preset.",
+        "A value missing from the report is empty. A report whose labels do not match is stored invalid with the reason and nothing is sent; correct the template and resend it as a new message.",
         "Test with a PDF, under the template, reads a report you choose and shows the fields and the message a destination would get; nothing is stored or sent. On an invalid report, Test against the current template reads it again.",
         "In the message detail, a stored report's Text view is the text read from it, page by page, with <HT> between phrases; Hex shows the file. Fields lists the values the channel's template reads."
       ]
