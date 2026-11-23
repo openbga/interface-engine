@@ -15,6 +15,7 @@ import type {
   SourceConfig,
   TapFramer,
 } from "@/api/types";
+import { passesThrough } from "@/lib/protocols";
 import { protocolLabel } from "@/lib/status";
 import { type RequireFormValues, requireToValues, valuesToRequire } from "./requireForm";
 import {
@@ -147,10 +148,25 @@ export const STARTER_TEMPLATE = JSON.stringify(
   2,
 );
 
+/** What an HL7 file destination starts with: a file name and the header fields to fill in. */
+export const HL7_FILE_STARTER = JSON.stringify(
+  {
+    file_name: "{sample_id}_{date}{time}_{seq}.hl7",
+    sending_application: "",
+    sending_facility: "",
+    receiving_application: "",
+    receiving_facility: "",
+    processing_id: "P",
+  },
+  null,
+  2,
+);
+
 /**
  * docs/spec/configuration.md section 9, `passthrough_protocol`: a destination with no mapping
  * rules and no code tables passes the original message through unchanged, so it must speak the
- * source's protocol. The message, or null when the rule holds or does not apply yet.
+ * source's protocol (or write HL7 files for an HL7 source). The message, or null when the rule
+ * holds or does not apply yet.
  */
 export function passthroughProblem(
   sourceProtocol: Protocol | null,
@@ -161,7 +177,7 @@ export function passthroughProblem(
   if (sourceProtocol === null || destination.protocol === null) return null;
   if (destination.mappingHidden) return null;
   if (destination.mappings.length > 0 || destination.codeTables.length > 0) return null;
-  if (destination.protocol === sourceProtocol) return null;
+  if (passesThrough(sourceProtocol, destination.protocol)) return null;
   return `Without a mapping, this destination must use the source's protocol (${protocolLabel(sourceProtocol)}). Choose that protocol or add a mapping.`;
 }
 

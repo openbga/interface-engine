@@ -1,7 +1,7 @@
 // Setup checks (docs/spec/diagnostics.md §10) and notifications (§6.1): read-only, nothing is
 // sent to an instrument or a destination system.
 import type { SerialPortKind } from "@/ipc/generated";
-import type { EndpointConfig } from "./config";
+import type { DestinationConfig, EndpointConfig } from "./config";
 
 export type { SerialPortKind };
 
@@ -53,6 +53,59 @@ export interface ProbeReport {
   steps: ProbeStep[];
   /** One sentence for the operator. */
   summary: string;
+}
+
+/**
+ * A PDF report read with a template, and mapped for a destination when one is given
+ * (docs/spec/pdf-reports.md §9): the editor's current, possibly unsaved, settings. Nothing is
+ * stored or sent; the engine audits the test.
+ */
+export interface PdfReportTestRequest {
+  /** The source's template as the editor holds it (a JSON object). */
+  templateJson: string;
+  /** The report: its bytes in Base64, at most 8 MiB. */
+  file?: string;
+  /** Or a stored PDF report message, whose original is read. */
+  messageId?: string;
+  /** A destination of the channel to map the report for. */
+  destination?: DestinationConfig;
+}
+
+/** One phrase of an extracted line, in points from the top left of the page. */
+interface PdfPhraseLayout {
+  text: string;
+  left: number;
+  right: number;
+  size: number;
+}
+
+interface PdfLineLayout {
+  /** Vertical center, points from the top of the page. */
+  center: number;
+  phrases: PdfPhraseLayout[];
+}
+
+interface PdfPageLayout {
+  number: number;
+  lines: PdfLineLayout[];
+}
+
+/** What a PDF report test found. Report content: shown only in the test's own view. */
+export interface PdfReportTestResult {
+  /** The report reads with the template. */
+  ok: boolean;
+  /** Why not: `pdf_unreadable`, `pdf_no_text`, `pdf_limits`, `template_mismatch`, `field_invalid`. */
+  reasonCode: string | null;
+  /** What failed, in template terms. */
+  reasonDetail: string | null;
+  /** The extracted lines, to write or correct a template. */
+  pages: PdfPageLayout[];
+  /** `field.<name>` and `report.pages` with their values; empty when the report does not read. */
+  fields: { path: string; value: string }[];
+  /** The message mapped for the destination, the embedded report shortened. */
+  output: string | null;
+  /** The mapping's transform error instead. */
+  outputError: string | null;
 }
 
 /** The outcome of a test message to one notification target. */

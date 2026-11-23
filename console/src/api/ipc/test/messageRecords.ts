@@ -97,6 +97,7 @@ export function record(extra: Partial<MessageRecord> = {}): MessageRecord {
     responded_at: "2026-11-06T12:00:00Z",
     abort_reason: null,
     reason_code: null,
+    reason_detail: null,
     duplicate_of: null,
     revision_of: null,
     revised_by: null,

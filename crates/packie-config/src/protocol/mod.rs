@@ -4,6 +4,7 @@
 mod delimited;
 mod hl7;
 mod instrument;
+mod pdf;
 pub mod profiles;
 
 use packie_core::{AckLevel, ProtocolKind};
@@ -13,8 +14,9 @@ use ts_rs::TS;
 use crate::tagged;
 
 pub use delimited::{Column, ColumnType, DelimitedSettings, LineEnding, OnExists, RecordMode};
-pub use hl7::{AckMode, Hl7Settings, ProcessingId, ReplyType};
+pub use hl7::{AckMode, Hl7FileSettings, Hl7Settings, ProcessingId, ReplyType};
 pub use instrument::{AstmRole, AstmSettings, AuClass, AuFormat, AuFraming, AuProfile, AuSettings};
+pub use pdf::{FieldPosition, OneOrMore, PdfField, PdfReportSettings};
 
 /// A connector's protocol and its settings, written as `protocol` and `settings`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
@@ -27,25 +29,32 @@ pub enum ProtocolSettings {
     /// HL7 v2 over MLLP.
     #[serde(rename = "hl7_mllp")]
     Hl7(Hl7Settings),
+    /// HL7 v2 messages written as files (destination only).
+    #[serde(rename = "hl7_file")]
+    Hl7File(Hl7FileSettings),
     /// Delimited files.
     #[serde(rename = "delimited_file")]
     Delimited(DelimitedSettings),
+    /// PDF reports (source only).
+    PdfReport(PdfReportSettings),
     /// Raw bytes; only bridge taps use it, validation rejects it on connectors.
     Raw,
 }
 
 impl ProtocolSettings {
     /// The names its messages have, against which filter and mapping paths are checked:
-    /// HL7 (also for `raw`), ASTM, AU, or the delimited columns.
+    /// HL7 (also for `hl7_file` and `raw`), ASTM, AU, the delimited columns, or the PDF
+    /// template fields.
     #[must_use]
     pub fn schema(&self) -> packie_transform::Schema {
         match self {
-            Self::Hl7(_) | Self::Raw => packie_transform::Schema::hl7(),
+            Self::Hl7(_) | Self::Hl7File(_) | Self::Raw => packie_transform::Schema::hl7(),
             Self::Astm(_) => packie_transform::Schema::astm(),
             Self::Au(_) => packie_transform::Schema::au(),
             Self::Delimited(settings) => {
                 packie_transform::Schema::delimited(settings.columns.iter().map(|c| c.name.clone()))
             }
+            Self::PdfReport(settings) => packie_transform::Schema::pdf(settings.field_names()),
         }
     }
 
@@ -59,7 +68,9 @@ impl ProtocolSettings {
             "astm" => Self::Astm(tagged::at::<D, _>(settings, "settings")?),
             "au" => Self::Au(tagged::at::<D, _>(settings, "settings")?),
             "hl7_mllp" => Self::Hl7(tagged::at::<D, _>(settings, "settings")?),
+            "hl7_file" => Self::Hl7File(tagged::at::<D, _>(settings, "settings")?),
             "delimited_file" => Self::Delimited(tagged::at::<D, _>(settings, "settings")?),
+            "pdf_report" => Self::PdfReport(tagged::at::<D, _>(settings, "settings")?),
             "raw" => Self::Raw,
             other => {
                 let names = ProtocolKind::ALL
@@ -78,9 +89,18 @@ impl ProtocolSettings {
             Self::Astm(_) => ProtocolKind::Astm,
             Self::Au(_) => ProtocolKind::Au,
             Self::Hl7(_) => ProtocolKind::Hl7,
+            Self::Hl7File(_) => ProtocolKind::Hl7File,
             Self::Delimited(_) => ProtocolKind::Delimited,
+            Self::PdfReport(_) => ProtocolKind::PdfReport,
             Self::Raw => ProtocolKind::Raw,
         }
+    }
+
+    /// Whether a destination of this protocol can deliver `source`'s messages without a
+    /// mapping: the same protocol, or HL7 files for an HL7 MLLP source.
+    #[must_use]
+    pub fn passes_through(&self, source: &Self) -> bool {
+        self.kind() == source.kind() || matches!((source, self), (Self::Hl7(_), Self::Hl7File(_)))
     }
 
     /// The highest acknowledgement level this protocol can prove as a destination
@@ -88,7 +108,10 @@ impl ProtocolSettings {
     #[must_use]
     pub const fn highest_ack_level(&self) -> AckLevel {
         match self {
-            Self::Delimited(_) | Self::Raw => AckLevel::HandedOff,
+            // A PDF report is never a destination; validation refuses it there.
+            Self::Delimited(_) | Self::Hl7File(_) | Self::PdfReport(_) | Self::Raw => {
+                AckLevel::HandedOff
+            }
             Self::Hl7(s) if matches!(s.ack_mode, AckMode::None) => AckLevel::HandedOff,
             Self::Hl7(_) => AckLevel::Accepted,
             // Class A instruments send no acknowledgement.

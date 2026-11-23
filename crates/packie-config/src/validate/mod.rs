@@ -7,6 +7,7 @@
 
 mod channels;
 mod endpoints;
+mod pdf;
 mod problem;
 mod protocols;
 

@@ -1,0 +1,38 @@
+.choose {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.file {
+  color: var(--color-text-muted);
+}
+
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.heading {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+.text {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  max-height: 20rem;
+  overflow: auto;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+  white-space: pre;
+  background: var(--color-surface-sunken);
+  border-radius: var(--radius-md);
+}
+
+.lines summary {
+  cursor: pointer;
+  margin-bottom: var(--space-2);
+}

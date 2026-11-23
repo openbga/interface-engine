@@ -212,12 +212,13 @@ one directory; use two endpoints for separate in and out directories.
 | `mode` | folder | string | `watch` | `watch` (change notification plus a safety poll) or `poll`. |
 | `poll_interval_seconds` | both | integer | `30` (folder), `60` (sftp) | 1–86,400. Always used by sftp and by folder in `poll` mode; the safety poll in `watch` mode. |
 | `file_pattern` | both | string | `*` | Non-empty after trimming, without `/` or `\`. Glob matched against the file name; `?` and `*` are wildcards. |
-| `recursive` | both | boolean | `false` | Include sub-directories (except `processed_directory`). |
+| `recursive` | both | boolean | `false` | Include sub-directories (except `processed_directory`, `filtered_directory` and `invalid_directory`). |
 | `ignore_suffixes` | both | array of string | `[".tmp",".part",".partial",".crdownload"]` | Each suffix is non-empty after trimming. Files ending in any suffix are never read. Neither are files whose name starts with `.` (the engine's own temporary files), links and special files. |
 | `stable_seconds` | both | integer | `2` | 0–3600. A file is complete when its size and modified time have not changed for this long (sftp: across two polls at least this far apart). |
 | `exclusive_open_check` | folder | boolean | `true` | Also require that the file can be opened for exclusive read, which detects a writer holding it. |
 | `on_consumed` | both | string | `move` | What happens to a source file after its content is committed: `move` (to `processed_directory`), `delete`, `leave`. With `leave`, duplicate detection prevents reprocessing. |
 | `processed_directory` | both | string | `processed` | Non-empty after trimming. Relative path inside the source directory, with `/` or `\` separators; an absolute path or a `..` part is rejected. Created when needed. A moved file keeps its relative path below it; a name that already exists there gets a `-1`, `-2`… suffix. |
+| `filtered_directory`, `invalid_directory` | both | string or null | `null` | `pdf_report` sources only, with `on_consumed: move`; as `processed_directory`, and different from it and from each other. A report the source filters exclude (`filtered`) is moved to `filtered_directory`, one that does not parse or is too large (`invalid`, `aborted`) to `invalid_directory`, the others to `processed_directory`. `null` uses `processed_directory`. |
 | `write_mode` | both | string | `atomic_rename` | Destination writes: `atomic_rename` (write a uniquely named hidden `.<random>.part` file created exclusively in the same directory, then move it into place; on Windows a replacing move refused because another program briefly holds the name (another writer replacing it, a virus scanner) is retried for up to about 1.4 s; `on_exists` `fail`/`suffix` never replace a file) or `direct` (write the final name; links are never written through). `on_exists` `append` always appends to the existing file in place, in either mode. |
 
 ## 6. Channels
@@ -297,11 +298,11 @@ A connector binds an endpoint to a protocol.
 | `label` | no | yes | string | none | 1–100 characters. |
 | `enabled` | no | yes | boolean | `true` | A disabled destination gets no new deliveries; its queued deliveries wait. |
 | `endpoint` | yes | yes | string | none | Existing endpoint; must be enabled for an enabled source channel or an enabled destination of an enabled channel (section 5). |
-| `protocol` | yes | yes | string | none | `astm`, `au`, `hl7_mllp`, `delimited_file` (`raw` is only for bridge taps). Must suit the endpoint kind (table below). |
+| `protocol` | yes | yes | string | none | `astm`, `au`, `hl7_mllp`, `hl7_file` (destination only), `delimited_file`, `pdf_report` (source only); `raw` is only for bridge taps. Must suit the endpoint kind (table below). |
 | `settings` | yes | yes | object | per protocol | Section 7. |
 | `duplicate_detection` | yes | no | boolean | `true` | Source only. See [message-channels.md](message-channels.md#7-duplicate-detection). |
 | `filters` | no | yes | array | `[]` | Destination filters; all must pass for a delivery to be created. |
-| `mapping` | no | yes | object or null | `null` | Section 8. `null` passes the source message through unchanged and requires the same `protocol` as the source. |
+| `mapping` | no | yes | object or null | `null` | Section 8. `null` passes the source message through unchanged and requires the same `protocol` as the source, or `hl7_file` for an `hl7_mllp` source. |
 | `delivery` | no | yes | object | channel `delivery` | Overrides, field by field. An omitted override field or a field set to `null` inherits; a supplied `retry` object replaces the channel retry policy and fills omitted retry fields with retry defaults. |
 
 | Protocol | Endpoint kinds |
@@ -309,6 +310,8 @@ A connector binds an endpoint to a protocol.
 | `astm`, `au` | `serial`, `tcp_client`, `tcp_listener` |
 | `hl7_mllp` | `tcp_client`, `tcp_listener` |
 | `delimited_file` | `folder`, `sftp` |
+| `hl7_file` | `folder`, `sftp`, as a destination |
+| `pdf_report` | `folder`, `sftp`, as a source |
 
 The source connector receives, the destination connector sends, whatever the endpoint kind.
 
@@ -325,7 +328,7 @@ The source connector receives, the destination connector sends, whatever the end
 
 | Protocol | Highest level | Default `ack_required` |
 | --- | --- | --- |
-| `delimited_file` | `handed_off` | `handed_off` |
+| `delimited_file`, `hl7_file` | `handed_off` | `handed_off` |
 | `astm`, `au` class B | `received` | `received` |
 | `au` class A | `handed_off` (class A sends no acknowledgement) | `handed_off` |
 | `hl7_mllp` | `accepted`; `handed_off` with `ack_mode: none` | `accepted`; `handed_off` with `ack_mode: none` |
@@ -476,11 +479,59 @@ The connector profiles are `hl7_mllp_end_without_cr`, `hl7_order_response_source
 `sample_id_path: O.4.3` that `astm_results_to_hl7_oru_instrument_specimen_id` needs so the
 stored message carries the specimen id), `astm_long_frames` and `astm_repeated_enq`.
 
+The PDF report profiles `pdf_newborn_screening_report` (a source template) and
+`pdf_newborn_screening_to_hl7_oru` (its mapping) are described in
+[pdf-reports.md §10](pdf-reports.md#10-shipped-profile).
+
+### 7.7 `pdf_report`
+
+Source only. Behavior, matching rules and the model are in [pdf-reports.md](pdf-reports.md).
+
+| Field | Type | Default | Validation |
+| --- | --- | --- | --- |
+| `max_file_bytes` | integer | `20971520` | 1024–268,435,456. A larger file is not read; an `aborted` message records it. |
+| `max_pages` | integer | `20` | 1–500. |
+| `phrase_gap` | number | `2.0` | 0.5–20, at most 2 decimal places. A horizontal gap of at least this many times the font size separates phrases. |
+| `label_area_end` | array | `[]` | 0–8 texts of 1–100 characters; the label area ends at the first line whose first phrase begins with one of them. |
+| `fields` | array | none | 1–200 [fields](#fields). |
+
+#### Fields
+
+| Field | Type | Default | Validation |
+| --- | --- | --- | --- |
+| `name` | string | none | `^[a-z][a-z0-9_]{0,40}$`, unique among fields. Fields named `control_id`, `sample_id` and `patient_id` fill the message identifiers of those names. |
+| `label` | string or array | none | 1–100 characters, or an array of 1–8 such strings. |
+| `position` | string | `right` | `right` or `below`. |
+| `occurrence` | integer | `0` | −1 to 20. |
+| `line` | integer | `1` | 1–20; only with `below`. |
+| `phrase` | integer | `0` | −1 to 20 (−1 the last phrase of the line); only with `below`. |
+| `indent` | number | `4` | 0–600 points, at most 2 decimal places; only with `below`. |
+| `required` | boolean | `false` | |
+| `type` | string | `string` | `string`, `integer`, `decimal`, `date`, `datetime`. |
+| `format` | string, array or null | `null` | Required for `date` and `datetime`: a [date format](#date-and-time-formats) or an array of 1–4. |
+
+### 7.8 `hl7_file`
+
+Destination only: each delivery writes one HL7 v2 message as one file on a `folder` or `sftp`
+endpoint, for receivers that collect HL7 files instead of listening for MLLP.
+
+| Field | Type | Default | Validation |
+| --- | --- | --- | --- |
+| `version`, `sending_application`, `sending_facility`, `receiving_application`, `receiving_facility`, `processing_id`, `max_message_bytes` | | | As [`hl7_mllp`](#73-hl7_mllp). A mapped message larger than `max_message_bytes` is not written: the delivery fails with `transform_error`. |
+| `file_name` | string | none | Required. As `delimited_file.file_name`, for example `ORU_{sample_id}_{date}{time}_{seq}.hl7`. |
+| `on_exists` | string | `suffix` | `suffix`, `overwrite`, `fail` (as `delimited_file`; no `append`). |
+
+Fixed: the file holds the segments of one message, each ended by a carriage return, in UTF-8
+without MLLP framing or a byte-order mark. No acknowledgement is read; the highest level is
+`handed_off`. Without a mapping an `hl7_mllp` source's message is written as received, with a
+carriage return added after its last segment when the sender left it off.
+
 ## 8. Filters and mappings
 
 Declarative only in version 1 (decisions #6). Paths address the parsed message model. A path
 that stops above the leaf yields the text with its separators (`MSH.9` is `ORU^R01`); a path to
-a component yields that component. Filters and mappings never see raw bytes.
+a component yields that component. Filters and mappings never see raw bytes, except a PDF
+report's file as Base64 (`report.file_base64`).
 
 **Path syntax.** Occurrence (`[occ]`) and repetition (`[rep]`) count from 0 and default to 0, the
 first. Fields, components and subcomponents count from 1. Every numeric index is at most
@@ -492,6 +543,7 @@ first. Fields, components and subcomponents count from 1. Every numeric index is
 | ASTM | `R[occ].field[rep].component`; record letter `H P O R C Q M L` | `R.4`, `R[2].3.4`, `P.3`, `O.3` |
 | AU | `name` for a header field, `test[occ].name` for a result item | `sample_id`, `test[0].value` |
 | Delimited file | `col[occ].name`; `name` is a column `name` of the connector | `col.sample_id`, `col[1].result` |
+| PDF report | `field.name`, `report.pages`, `report.file_base64`; field names from the connector's template | `field.dob`, `report.file_base64` |
 
 Only these forms are accepted. The HL7 codec's own `OBX(2)-5.1` and the form `R(3).4` are not
 paths in configuration.
@@ -502,6 +554,7 @@ paths in configuration.
 | ASTM | Fields are numbered as in ASTM E1394, where field 1 is the record type: `R.1` is `R`, `R.2` the sequence number, `R.3` the universal test id (`^^^GLU`, so `R.3.4` is `GLU`), `R.4` the value, `R.7` the abnormal flag, `R.13` the completion time; `P.3` and `P.4` the patient ids, `P.6` the name; `O.3` the specimen id. The message is one flat list of records: `R[2]` is the third result of the message wherever it sits under its patient and order. Field 1 and `H.2` (the delimiters) cannot be written. A new record is inserted before `L`. |
 | AU | Header fields: `kind` (`normal`, `rerun`, `stat`, `stat_rerun`, `reagent_blank`, `calibration`, `quality_control`), `unit_no`, `rack`, `cup`, `sample_type`, `sample_no`, `sample_id`, `reserved`, `sex`, `age`, `month`, `info1` to `info6`. Items: `test[n].code`, `.value`, `.flags`. Padding spaces are trimmed, leading zeroes kept; a field the instrument profile does not carry is empty. AU messages are read-only: no `to` path or `into` record can be AU. |
 | Delimited file | `col.<name>` is the column of the first row. A `grouped` message has several rows: `col[1].<name>` is the second, and `for_each` can run `over` or `into` `col`. Values are text; decimals are never converted. |
+| PDF report | Paths of [pdf-reports.md §5](pdf-reports.md#5-model-and-paths). Values are text. PDF reports are read-only: no `to` path or `into` record can be a PDF path. |
 | `$.` | Inside `for_each` a path may begin with `$.` and omit the record: `$.3.1` (HL7, ASTM), `$.value` (AU), `$.sample_id` (delimited). In `from` and in conditions it addresses the current input occurrence; in `to` the output occurrence (the one the loop created, with `mode: "update"` the target's copy of the input occurrence, with `mode: "repeat"` repetition *i* of the `into` field). Inside `append` a `to` is always a `$.` path of the new record; inside a `calculate` `find`, `$.` addresses the candidate occurrence. Elsewhere a `$.` path is invalid. |
 
 **Reading and writing structure (HL7 and ASTM).** Reading a field, repetition or component
@@ -556,7 +609,7 @@ A text `value` is a JSON string or number (a number is compared as its text). Op
 | `tables` | object | `{}` | Name to object of string to string (code tables). |
 | `require_single_group` | boolean | `false` | `true`: before any rule runs, a source message holding more than one patient, order or specimen group (HL7: more than one `PID`, `OBR` or `SPM`; ASTM: more than one `P` or `O`) fails the mapping with a transform error at the first repeated record (`rule require_single_group (mapping) at path P: the message holds more than one patient, order or specimen group`). For mappings that copy one sample's identifiers to every result, such as presets that assume one sample per message: the delivery fails visibly instead of attributing results to the wrong sample. Nothing is filtered. |
 | `require` | array | `[]` | Preconditions on the source, checked in order after `require_single_group` and before any rule. `{"count": R, "min": n, "max": n}`: the number of occurrences of record or segment `R` is within `min` to `max` (integers 0–65,535, at least one, `min` ≤ `max`). `{"same": P}`: every occurrence of the record of path `P` (written without `$.` and without an occurrence) holds the same text at `P`, missing counting as empty; zero or one occurrence passes. A failed condition is a transform error naming `require[i]`, op `require` and the record or path, with the reason `the message has 19 occurrences; required 1 to 18` (or `at most …`, `at least …`) or `the occurrences hold different values`; nothing is filtered. For example a one-specimen order download: `[{"count": "PID", "max": 1}, {"count": "SPM", "max": 1}, {"count": "OBR", "min": 1, "max": 18}, {"same": "OBR.3.1"}, {"same": "ORC.1"}]`. |
-| `rules` | array | none | Ordered [rules](#rules), executed top to bottom. An HL7 or ASTM target of the same protocol starts as a copy of the source. A cross-protocol target starts empty except for generated header fields (HL7 MSH from the connector settings, a new MSH-10 and MSH-7; ASTM H and L records). Delimited output starts with empty rows and writes the configured file header. |
+| `rules` | array | none | Ordered [rules](#rules), executed top to bottom. An HL7 or ASTM target of the same protocol starts as a copy of the source (an HL7 target is `hl7_mllp` or `hl7_file`). A cross-protocol target starts empty except for generated header fields (HL7 MSH from the connector settings, a new MSH-10 and MSH-7; ASTM H and L records). Delimited output starts with empty rows and writes the configured file header. |
 
 #### Rules
 
@@ -697,13 +750,16 @@ produced).
 | `{"step": "slice", "start": 0, "length": 20}` | `start`: 0–65,535; `length` (optional): 1–65,535 | Up to `length` characters from `start` (0-based); empty past the end. |
 | `{"step": "replace", "find": ",", "with": "."}` | `find`: 1–64 characters; `with`: 0–64 characters | Every occurrence of `find` replaced, literally and case-sensitively. |
 | `{"step": "upper"}`, `{"step": "lower"}` | | Case changed. |
+| `{"step": "strip_suffix", "from": "field.last_name"}` | `from`: an absolute path of the source | The text at `from`, trimmed, removed from the end of the text (compared without case, at a word boundary), then the result trimmed. When the text does not end with it, or it is empty, the result is empty, so `required` and `default` apply instead of a wrong value (`ANNA MARIA DOE` without `DOE` is `ANNA MARIA`). |
 
 #### Date and time formats
 
-Tokens are `yyyy` (year), `yy` (year, 1970 to 2069), `MM`, `dd`, `HH` (00–23), `mm`, `ss`; every
-token is fixed-width and zero-padded. Any other punctuation or space is a literal. Any other
+Tokens are `yyyy` (year), `yy` (year, 1970 to 2069), `MM`, `dd`, `HH` (00–23), `mm`, `ss`, which
+are fixed-width and zero-padded, and `M`, `d`, `H`, which read one or two digits and are written
+without padding (`M/d/yyyy` reads `11/1/2026`). An unpadded token must be followed by a literal or
+end the format. Any other punctuation or space is a literal. Any other
 letter must be quoted: `'T'` is a literal `T`, and `''` inside quotes is a quote, so
-`yyyy-MM-dd'T'HH:mm:ss` is ISO 8601 local time. A token appears at most once, and a format has at
+`yyyy-MM-dd'T'HH:mm:ss` is ISO 8601 local time. A token appears at most once (`M` and `MM` are the same token), and a format has at
 least one token. The input must match its format completely.
 
 #### Semantic checks
@@ -711,8 +767,8 @@ least one token. The input must match its format completely.
 Mapping and filter paths are checked for syntax when the document is validated and against
 the protocol models. HL7 accepts segment names matching `[A-Z][A-Z0-9]{2}`; ASTM accepts its
 record letters. Their field numbers are checked against the syntax limit, without a
-segment/record-specific field dictionary. AU field names and delimited column names must
-exist in their models. `from` paths that
+segment/record-specific field dictionary. AU field names, delimited column names and PDF report field
+names must exist in their models. `from` paths that
 are valid but absent in a given message are empty at run time. Every problem is returned,
 each with its JSON path. Besides syntax and unknown names, these are errors:
 
@@ -726,8 +782,8 @@ each with its JSON path. Besides syntax and unknown names, these are errors:
 | `for_each.mode` other than `create`, `update` and `repeat`; `update` with `into` different from `over` or without an HL7 or ASTM target of the source protocol; `repeat` without an HL7 or ASTM target, with an `into` that is not a field path, or with a `$.` `to` of another field or with a repetition. |
 | A `require` entry that is not `{"count": …}` or `{"same": …}`, an unknown record, `count` without `min` and `max`, a bound outside 0–65,535 or `min` > `max`, a `same` path that starts with `$.` or names an occurrence. |
 | `require_single_group` that is not a boolean. A `calculate` formula that is not one of the forms, a constant that is not a decimal or is a fractional or larger-than-2^53 JSON number (also for `calculate.default`), an operator list of fewer than 2 or more than 16 formulas, more than 8 levels or 64 parts; `scale` outside 0–12 or missing with `div`; `rounding` without `scale`; an unknown `rounding`, `comparator`, `notation` or `on_invalid`; `default` without `on_invalid: "default"` or missing with it; `keep` without exactly one operand; a `find` record the model does not have or a `find.from` that is not a `$.` path; `notation: "sn"` without an HL7 source and target or with a component path. |
-| An unknown step, a step field out of its range, more than 16 steps, or `steps` on a `concat` text part. |
-| A `to` path or `into` record that cannot be written (AU, `MSH.1`, `MSH.2`, ASTM field 1 and `H.2`, a second `MSH`, an ASTM `H` or `L`). |
+| An unknown step, a step field out of its range, more than 16 steps, or `steps` on a `concat` text part; a `strip_suffix` `from` that is a `$.` path or not valid for the source. |
+| A `to` path or `into` record that cannot be written (AU, PDF report, `MSH.1`, `MSH.2`, ASTM field 1 and `H.2`, a second `MSH`, an ASTM `H` or `L`). |
 | An invalid date format, or a time zone the system does not know. |
 | A `matches` pattern over 200 characters, not a valid regular expression, or exceeding the 1 MiB compiled-size limit; a numeric operator with a non-decimal `value`. |
 
@@ -746,7 +802,7 @@ the first. Each problem is `{severity, code, path, message}`; `path` is a JSON p
 | `duplicate_id` | error | `endpoint_id`, `channel_id`, `destination_id` or column `name` repeated within its scope. |
 | `unknown_endpoint` | error | A channel references an endpoint that does not exist. |
 | `endpoint_disabled` | error | An enabled channel (or enabled destination) references a disabled endpoint. |
-| `endpoint_kind_not_allowed` | error | Bridge endpoint is not `serial`/`tcp_client`/`tcp_listener`, or a protocol does not suit the endpoint kind. |
+| `endpoint_kind_not_allowed` | error | Bridge endpoint is not `serial`/`tcp_client`/`tcp_listener`, a protocol does not suit the endpoint kind, `pdf_report` is a destination protocol or `hl7_file` a source protocol. |
 | `same_endpoint` | error | A bridge's `endpoint_a` equals `endpoint_b`. |
 | `port_conflict` | error | Two enabled endpoints use the same serial `port_name` (case-insensitive) or the same listener port on overlapping bind addresses. |
 | `listener_strategy` | error | `wait_for_listener_then_pair` without a `tcp_listener` endpoint. |
@@ -756,7 +812,7 @@ the first. Each problem is `{severity, code, path, message}`; `path` is a JSON p
 | `retry_invalid` | error | A retry number out of range, a multiplier with more than 4 decimal places, or `max_delay_ms < initial_delay_ms`. |
 | `tap_invalid` | error | `record_messages=true` with framer `none`. |
 | `ack_level_unreachable` | error | `ack_required` above what the protocol can prove, or `ack_mode=none` with `ack_required` above `handed_off`. |
-| `passthrough_protocol` | error | A destination with `mapping=null` has a protocol different from the source. |
+| `passthrough_protocol` | error | A destination with `mapping=null` has a protocol different from the source (other than `hl7_file` for an `hl7_mllp` source). |
 | `mapping_invalid` | error | Rule syntax, unknown op, unknown table, or a path not valid for the protocol model. |
 | `filter_invalid` | error | Expression syntax or a path not valid for the protocol model. |
 | `secret_inline` | error | A secret field holds a literal instead of `{"secret": name}`. |
@@ -777,7 +833,7 @@ applied. `mapping_invalid` and `filter_invalid` come from compiling every filter
 with the transformation engine when the document is validated (so `packie config validate`
 reports them offline): channel and destination filters against the source protocol's model,
 mapping `from` paths against the source's and `to` paths against the destination's (delimited
-models know their configured columns); the errors are those of
+models know their configured columns, PDF report models their template's fields); the errors are those of
 [Semantic checks](#semantic-checks). Each problem carries the path of the offending rule or
 field.
 

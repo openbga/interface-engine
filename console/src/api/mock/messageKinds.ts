@@ -41,9 +41,11 @@ export const stateRank = (kind: number): number =>
 
 export const PREFIX: Record<Protocol, string> = {
   hl7_mllp: "MC",
+  hl7_file: "HF",
   astm: "AS",
   au: "AU",
   delimited_file: "ROW-",
+  pdf_report: "PDF-",
   raw: "RW",
 };
 
@@ -76,6 +78,8 @@ export function displayType(protocol: Protocol, type: string): string | null {
       return "au";
     case "delimited_file":
       return "delimited";
+    case "pdf_report":
+      return "pdf_report";
     default:
       return null;
   }

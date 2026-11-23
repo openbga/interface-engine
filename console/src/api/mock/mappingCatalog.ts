@@ -308,6 +308,18 @@ export function connectorSettings(
       };
     case "delimited_file":
       return { templateJson: delimitedTemplate(role) };
+    case "hl7_file":
+      return {
+        templateJson: JSON.stringify({ file_name: "ORU_{sample_id}_{seq}.hl7" }, null, 2),
+      };
+    case "pdf_report":
+      return {
+        templateJson: JSON.stringify(
+          { fields: [{ name: "sample_id", label: "Lab Number:", required: true }] },
+          null,
+          2,
+        ),
+      };
     case "astm":
       return {
         astmRole: "computer",

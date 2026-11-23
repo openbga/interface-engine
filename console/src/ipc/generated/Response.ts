@@ -19,6 +19,7 @@ import type { MessageList } from "./MessageList";
 import type { MessageRecord } from "./MessageRecord";
 import type { NotificationResult } from "./NotificationResult";
 import type { ParsedFields } from "./ParsedFields";
+import type { PdfReportTestResult } from "./PdfReportTestResult";
 import type { ProbeReport } from "./ProbeReport";
 import type { Problem } from "./Problem";
 import type { ResendResult } from "./ResendResult";
@@ -127,7 +128,7 @@ delivery: DeliveryRecord, } | { "type": "audit_events" } & AuditPage | { "type":
 /**
  * Sorted by name.
  */
-ports: Array<SerialPort>, } | { "type": "endpoint_tested" } & ProbeReport | { "type": "notification_tested", 
+ports: Array<SerialPort>, } | { "type": "endpoint_tested" } & ProbeReport | { "type": "pdf_report_tested" } & PdfReportTestResult | { "type": "notification_tested", 
 /**
  * One result per configured target; empty when none is configured.
  */

@@ -140,10 +140,18 @@ The checks run with the engine's service-account access, not your terminal accou
 | Test a saved endpoint's active settings | `packie endpoints test <endpoint-id>` |
 | Test an unsaved TCP client definition | `packie endpoints test --kind tcp_client --settings '{"host":"127.0.0.1","port":3001}' --timeout 10` |
 | Read a structured test result | `packie endpoints test <endpoint-id> --json` |
+| Read a PDF report with a channel's template, and map it for one destination | `packie pdf test report.pdf --channel <channel-id> --destination <destination-id>` |
 
 Serial discovery opens nothing. It shows port name, bus kind, USB vendor/product ids and
 device text where known, plus configured endpoints using the port and the channel holding
 it open. An empty result means the OS reported no ports; check the cable and driver.
+
+**PDF report tests** read the file with the active template of the channel's PDF report
+source and print the fields it reads, or why it does not read; with `--destination` they also
+print the message the destination would be sent, the embedded report shortened. Nothing is
+stored, moved or sent, and the test is recorded in the audit log because it shows report
+content. `--json` adds the extracted lines with each phrase's position, for correcting a
+template. The command exits 1 when the report does not read or the mapping fails.
 
 **Endpoint tests never send application data to an instrument or destination.** Each test
 validates the definition, then reports each step's result, duration and detail. The overall

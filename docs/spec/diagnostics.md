@@ -125,7 +125,7 @@ The `message` object:
 | Field | Type | Notes |
 | --- | --- | --- |
 | `source` | object | Endpoint reference with role `source`. |
-| `protocol` | string | Source protocol: `astm`, `au`, `hl7_mllp`, `delimited_file`, `raw`. |
+| `protocol` | string | Source protocol: `astm`, `au`, `hl7_mllp`, `delimited_file`, `pdf_report`, `raw`. |
 | `session` | string | Source session: `idle`, `receiving`, `waiting_for_peer`, `closed`. |
 | `counters` | object | Since the instance started: `received` (every message committed, including duplicates and invalid ones), `duplicates`, `invalid`, `filtered`, `aborted`, `bytes_in`. |
 | `last_received_at` | string or null | Last committed message. |
@@ -362,7 +362,7 @@ Levels are as emitted; a row with two levels names both.
 | `message.committed` | debug | A message was committed; the source worker also reports its acknowledgement code (`none` for files) | `message_id`, `bytes`, `ack_code` (source worker); `sequence` (store) |
 | `message.duplicate` | info | Duplicate recorded | `message_id` |
 | `message.identity_reused` | info | Same identity, different content | `message_id` |
-| `message.invalid` | warn | Invalid message | `message_id`, `error_code` |
+| `message.invalid` | warn | Invalid message | `message_id`, `error_code`; `reason_detail` for a PDF report |
 | `message.aborted` | warn (source), info (store) | Aborted transfer | `message_id`, `error_code` (source), `reason_code` (store) |
 | `delivery.attempt_started` | info | Attempt recorded | `delivery_id`, `attempt_no` |
 | `delivery.attempt_refused` | warn | The store refused to start an attempt | `delivery_id` |
@@ -476,6 +476,7 @@ instrument or a destination system.
 | `list_serial_ports` | The ports the operating system reports, sorted by name. Linux lists from `/sys/class/tty` metadata (ttys with a backing device and a `/dev` node, RFCOMM names, USB ids read from the parent USB device, legacy 8250 slots without a UART skipped by their sysfs `type`); macOS and Windows use the `serialport` enumeration. Fields: `name`, `kind` (`usb`, `pci`, `bluetooth`, `unknown`), `vid`, `pid`, `serial_number`, `manufacturer`, `product` where known. `used_by` lists the active configuration's serial endpoints naming the port (compared without case on Windows), with the channels that use each and `held_by`, the channel holding it open now. Listing opens no port. |
 | `test_endpoint` | Takes `kind` and `settings` written as in the runtime document (secrets by reference) and an overall limit (`timeout_seconds` 1–60, default 10). The definition is checked by the document's endpoint rules first; problems come back as `invalid_config` with paths relative to the endpoint. Then each step runs within what is left of the limit; a step after a failed one is omitted. Audited as `endpoint_test`. |
 | `test_notification` | Section 6.1. |
+| `test_pdf_report` | Reads a PDF report with a template without storing anything: [pdf-reports.md §9](pdf-reports.md#9-test-tool). Audited as `pdf_report_test`. |
 
 | Kind | Steps (nothing is sent or left behind) |
 | --- | --- |

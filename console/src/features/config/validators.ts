@@ -54,6 +54,12 @@ export function jsonObjectProblem(text: string): string | null {
   }
 }
 
+/** A folder inside the endpoint's own: a relative path without `..` parts; blank is allowed. */
+export function subfolder(value: string): true | string {
+  const outside = /^([/\\]|[A-Za-z]:)/.test(value) || value.split(/[/\\]/).includes("..");
+  return outside ? "Enter a folder inside the endpoint's folder, such as processed." : true;
+}
+
 /** One glob over file names: `*` and `?` stand for any text and any one character. */
 export const FILE_PATTERN: TextFormat = {
   pattern: /^[^/\\[\]{}]+$/,

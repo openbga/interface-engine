@@ -225,6 +225,11 @@ function destinationToWire(
   return next;
 }
 
+/** A destination on its own, as a new one is written (the PDF report test maps for it). */
+export function destinationAlone(ui: DestinationConfig, issues: Issues): WireDestination {
+  return destinationToWire(ui, undefined, undefined, "destination", issues);
+}
+
 // ── Message channels ───────────────────────────────────────────────────────────────────
 
 function sourceFromWire(raw: WireSource): SourceConfig {

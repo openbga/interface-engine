@@ -16,7 +16,8 @@
 //! `config_version` must equal the active version, it is saved atomically as the next
 //! version, and the per-channel diff is applied. Applies, channel commands, resends and
 //! closes are serialized, and each operator command is logged as `operator.command`.
-//! `GetMessage` adds the original's parsed fields (HL7 and ASTM). With `test_hooks` in the
+//! `GetMessageFields` lists the original's parsed fields (HL7, ASTM and PDF reports), and a
+//! PDF report's original reads as its extracted text. With `test_hooks` in the
 //! bootstrap, [`EngineContext::test_hooks`] carries the scenario hooks (hold store commits)
 //! and `crash` ends the process.
 
@@ -27,6 +28,9 @@ mod engine;
 mod exports;
 mod fields;
 mod handler;
+pub mod pdf;
+mod pdf_test;
+mod pdf_view;
 mod registry;
 mod reports;
 

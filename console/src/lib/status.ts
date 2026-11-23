@@ -98,7 +98,9 @@ const PROTOCOL_LABELS: Record<Protocol, string> = {
   astm: "ASTM",
   au: "AU",
   hl7_mllp: "HL7 v2",
+  hl7_file: "HL7 v2 files",
   delimited_file: "Delimited files",
+  pdf_report: "PDF reports",
   raw: "Raw",
 };
 

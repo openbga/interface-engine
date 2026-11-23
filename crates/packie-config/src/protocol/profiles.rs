@@ -28,7 +28,7 @@ pub struct ConnectorProfile {
     pub id: String,
     /// Short name for a picker.
     pub label: String,
-    /// `astm`, `au` or `hl7_mllp`.
+    /// `astm`, `au`, `hl7_mllp` or `pdf_report`.
     pub protocol: String,
     /// The connector roles it fits.
     pub roles: Vec<ConnectorRole>,
@@ -52,7 +52,9 @@ pub struct Sample {
     /// path), as a patch.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_settings: Option<Value>,
-    /// The source message; records and segments end with CR.
+    /// The source message; records and segments end with CR. For a `pdf_report` source the
+    /// template's fields, `name: value` per CR-ended line, the report being the bytes
+    /// `%PDF-1.7 synthetic report`.
     pub input: String,
     /// The expected destination message.
     pub output: String,
@@ -66,7 +68,7 @@ pub struct MappingProfile {
     pub id: String,
     /// Short name for a picker.
     pub label: String,
-    /// Source protocol (`astm`, `au`, `hl7_mllp`).
+    /// Source protocol (`astm`, `au`, `hl7_mllp`, `pdf_report`).
     pub from: String,
     /// Destination protocol.
     pub to: String,

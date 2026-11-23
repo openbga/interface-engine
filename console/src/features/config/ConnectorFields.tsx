@@ -5,9 +5,10 @@ import { ChoiceInput, PickerInput, TextInput } from "@/components/FormFields";
 import type { RecordOption } from "@/components/RecordPicker";
 import { protocolLabel } from "@/lib/status";
 import { AuFields } from "./AuFields";
-import { passthroughProblem, STARTER_TEMPLATE } from "./channelForm";
+import { HL7_FILE_STARTER, passthroughProblem, STARTER_TEMPLATE } from "./channelForm";
 import { protocolsFor } from "./connectorProtocols";
 import { FormCheckbox } from "./FormCheckbox";
+import { PdfTestButton } from "./PdfTestButton";
 import { ConnectorPresets } from "./presets/ConnectorPresets";
 import { parseCodes, sampleIdPathProblem } from "./settingsForm";
 import { TemplateJsonField } from "./TemplateJsonField";
@@ -185,7 +186,15 @@ function ProtocolSettings({
     case "au":
       return <AuFields prefix={`${prefix}.settings.au`} />;
     case "delimited_file":
-      return <TemplateJsonField name={`${prefix}.settings.templateJson`} />;
+    case "hl7_file":
+      return <TemplateJsonField name={`${prefix}.settings.templateJson`} protocol={protocol} />;
+    case "pdf_report":
+      return (
+        <>
+          <TemplateJsonField name={`${prefix}.settings.templateJson`} protocol={protocol} />
+          {side === "source" && <PdfTestButton templateName={`${prefix}.settings.templateJson`} />}
+        </>
+      );
     default:
       return null;
   }
@@ -244,7 +253,7 @@ export function ConnectorFields({
   const protocol = useWatch({ control, name: `${prefix}.protocol` }) as Protocol | null;
   const endpointId = useWatch({ control, name: `${prefix}.endpointId` }) as string | null;
   const kind = endpoints.find((endpoint) => endpoint.id === endpointId)?.kind ?? null;
-  const allowed: Protocol[] = protocolsFor(kind);
+  const allowed: Protocol[] = protocolsFor(kind, side);
   const options = allowed.map((id) => ({ id, label: protocolLabel(id) }));
   // A protocol the endpoint no longer suits stays visible, so the error has something to name.
   if (protocol && !allowed.includes(protocol)) {
@@ -278,7 +287,9 @@ export function ConnectorFields({
         }}
         onChange={(chosen) => {
           const blank = String(getValues(templateName) ?? "").trim() === "";
-          if (chosen === "delimited_file" && blank) setValue(templateName, STARTER_TEMPLATE);
+          if (!blank) return;
+          if (chosen === "delimited_file") setValue(templateName, STARTER_TEMPLATE);
+          if (chosen === "hl7_file") setValue(templateName, HL7_FILE_STARTER);
         }}
       />
       <ProtocolSettings prefix={prefix} protocol={protocol} side={side} />

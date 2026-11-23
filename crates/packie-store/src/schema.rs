@@ -310,6 +310,12 @@ DROP INDEX IF EXISTS deliveries_destination_queue;
 INSERT INTO schema_version(version) VALUES (10);
 ";
 
+/// What failed when a PDF report did not parse, in template terms (never report text).
+const V11: &str = r"
+ALTER TABLE messages ADD COLUMN reason_detail TEXT;
+INSERT INTO schema_version(version) VALUES (11);
+";
+
 pub(crate) fn migrate(connection: &mut Connection) -> crate::Result<()> {
     let transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
     transaction.execute_batch(
@@ -320,7 +326,7 @@ pub(crate) fn migrate(connection: &mut Connection) -> crate::Result<()> {
         [],
         |row| row.get(0),
     )?;
-    if !(0..=10).contains(&version) {
+    if !(0..=11).contains(&version) {
         return Err(crate::Error::Invalid(format!(
             "unsupported store schema version {version}"
         )));
@@ -356,6 +362,9 @@ pub(crate) fn migrate(connection: &mut Connection) -> crate::Result<()> {
     if version < 10 {
         transaction.execute_batch(V10)?;
     }
+    if version < 11 {
+        transaction.execute_batch(V11)?;
+    }
     transaction.commit()?;
     Ok(())
 }
@@ -373,7 +382,15 @@ mod tests {
         let versions: i64 = connection
             .query_row("SELECT COUNT(*) FROM schema_version", [], |row| row.get(0))
             .unwrap();
-        assert_eq!(versions, 10);
+        assert_eq!(versions, 11);
+        let detail: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM pragma_table_info('messages') WHERE name = 'reason_detail'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(detail, 1);
         let dropped: i64 = connection
             .query_row(
                 "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name IN
@@ -399,7 +416,7 @@ mod tests {
         connection
             .execute_batch(
                 "CREATE TABLE schema_version(version INTEGER PRIMARY KEY) STRICT;
-                 INSERT INTO schema_version VALUES(11);",
+                 INSERT INTO schema_version VALUES(12);",
             )
             .unwrap();
         assert!(migrate(&mut connection).is_err());
@@ -408,7 +425,7 @@ mod tests {
                 .query_row("SELECT MAX(version) FROM schema_version", [], |row| row
                     .get::<_, i64>(0))
                 .unwrap(),
-            11
+            12
         );
     }
 

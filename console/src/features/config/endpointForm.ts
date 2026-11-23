@@ -1,6 +1,11 @@
 // The endpoint form's values and how they become an `EndpointConfig`. Numbers are held as
 // text while typed; the form holds every kind's fields, and `kind` decides which are used.
-import type { EndpointConfig, EndpointKind, SerialEndpointConfig } from "@/api/types";
+import type {
+  EndpointConfig,
+  EndpointKind,
+  FileConsumption,
+  SerialEndpointConfig,
+} from "@/api/types";
 
 export interface EndpointFormValues {
   kind: EndpointKind | null;
@@ -32,6 +37,10 @@ export interface EndpointFormValues {
   passphraseSecretName: string;
   hostKeyFingerprint: string;
   remotePath: string;
+  onConsumed: FileConsumption["onConsumed"];
+  processedDirectory: string;
+  filteredDirectory: string;
+  invalidDirectory: string;
 }
 
 export const EMPTY_ENDPOINT_VALUES: EndpointFormValues = {
@@ -62,7 +71,34 @@ export const EMPTY_ENDPOINT_VALUES: EndpointFormValues = {
   passphraseSecretName: "",
   hostKeyFingerprint: "",
   remotePath: "",
+  onConsumed: "move",
+  processedDirectory: "processed",
+  filteredDirectory: "",
+  invalidDirectory: "",
 };
+
+/** The folder and SFTP fields of what happens to a file once it is stored. */
+function consumptionToValues(
+  config: FileConsumption,
+): Pick<EndpointFormValues, keyof FileConsumption> {
+  return {
+    onConsumed: config.onConsumed,
+    processedDirectory: config.processedDirectory,
+    filteredDirectory: config.filteredDirectory,
+    invalidDirectory: config.invalidDirectory,
+  };
+}
+
+/** The outcome folders only apply to moved files; hidden for the other choices, they are dropped. */
+function valuesToConsumption(values: EndpointFormValues): FileConsumption {
+  const moved = values.onConsumed === "move";
+  return {
+    onConsumed: values.onConsumed,
+    processedDirectory: values.processedDirectory.trim(),
+    filteredDirectory: moved ? values.filteredDirectory.trim() : "",
+    invalidDirectory: moved ? values.invalidDirectory.trim() : "",
+  };
+}
 
 /** The fields a kind starts with when it is chosen on create. */
 export function kindDefaults(
@@ -118,6 +154,7 @@ export function endpointToValues(config: EndpointConfig): EndpointFormValues {
         mode: config.mode,
         pollIntervalSec: String(config.pollIntervalSec),
         filePattern: config.filePattern,
+        ...consumptionToValues(config),
       };
     case "sftp":
       return {
@@ -132,6 +169,7 @@ export function endpointToValues(config: EndpointConfig): EndpointFormValues {
         remotePath: config.remotePath,
         pollIntervalSec: String(config.pollIntervalSec),
         filePattern: config.filePattern,
+        ...consumptionToValues(config),
       };
   }
 }
@@ -188,6 +226,7 @@ export function valuesToEndpoint(values: EndpointFormValues): EndpointConfig | n
         mode: values.mode === "poll" ? "poll" : "watch",
         pollIntervalSec: num(values.pollIntervalSec),
         filePattern: text(values.filePattern),
+        ...valuesToConsumption(values),
       };
     case "sftp":
       return {
@@ -204,6 +243,7 @@ export function valuesToEndpoint(values: EndpointFormValues): EndpointConfig | n
         remotePath: text(values.remotePath),
         pollIntervalSec: num(values.pollIntervalSec),
         filePattern: text(values.filePattern),
+        ...valuesToConsumption(values),
       };
   }
 }

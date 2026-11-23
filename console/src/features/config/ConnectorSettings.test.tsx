@@ -61,6 +61,7 @@ describe("source: duplicate detection and protocol by endpoint kind", () => {
       "AU",
       "HL7 v2",
       "Delimited files",
+      "PDF reports",
     ]);
     await pickEndpoint(user, source, "Endpoint", /^Chemistry serial/);
     expect(await optionsOf(user, source, "Protocol")).toEqual(["ASTM", "AU"]);
@@ -69,12 +70,43 @@ describe("source: duplicate detection and protocol by endpoint kind", () => {
     await pickEndpoint(user, source, "Endpoint", /^Analyzer link/);
     expect(await optionsOf(user, source, "Protocol")).toEqual(["ASTM", "AU", "HL7 v2"]);
     await pickEndpoint(user, source, "Endpoint", /^Incoming folder/);
-    expect(await optionsOf(user, source, "Protocol")).toEqual(["Delimited files"]);
+    expect(await optionsOf(user, source, "Protocol")).toEqual(["Delimited files", "PDF reports"]);
     await pickEndpoint(user, source, "Endpoint", /^Partner SFTP/);
-    expect(await optionsOf(user, source, "Protocol")).toEqual(["Delimited files"]);
+    expect(await optionsOf(user, source, "Protocol")).toEqual(["Delimited files", "PDF reports"]);
     const destination = group("Destination 1");
     await pickEndpoint(user, destination, "Endpoint", /^Chemistry serial/);
     expect(await optionsOf(user, destination, "Protocol")).toEqual(["ASTM", "AU"]);
+    // A PDF report is only ever read, HL7 files only written.
+    await pickEndpoint(user, destination, "Endpoint", /^Partner SFTP/);
+    expect(await optionsOf(user, destination, "Protocol")).toEqual([
+      "HL7 v2 files",
+      "Delimited files",
+    ]);
+  });
+
+  it("starts an HL7 file destination with a file name and the header fields", async () => {
+    const { user } = await openNewMessage();
+    const destination = group("Destination 1");
+    await pickEndpoint(user, destination, "Endpoint", /^Partner SFTP/);
+    await pick(user, destination, "Protocol", "HL7 v2 files");
+    const settings = within(destination).getByRole("textbox", {
+      name: "File and header settings (JSON)",
+    });
+    const starter = JSON.parse((settings as HTMLTextAreaElement).value) as Record<string, unknown>;
+    expect(starter.file_name).toBe("{sample_id}_{date}{time}_{seq}.hl7");
+    expect(starter).toHaveProperty("sending_facility");
+  });
+
+  it("offers a PDF test under a PDF report source's template", async () => {
+    const { user } = await openNewMessage();
+    const source = group("Source");
+    await pickEndpoint(user, source, "Endpoint", /^Incoming folder/);
+    await pick(user, source, "Protocol", "Delimited files");
+    expect(within(source).queryByRole("button", { name: "Test with a PDF…" })).toBeNull();
+    await pick(user, source, "Protocol", "PDF reports");
+    expect(within(source).getByText("Report template (JSON)")).toBeTruthy();
+    await user.click(within(source).getByRole("button", { name: "Test with a PDF…" }));
+    expect(await screen.findByRole("dialog", { name: "Test with a PDF" })).toBeTruthy();
   });
 
   it("names a protocol that no longer suits a changed endpoint and refuses to save it", async () => {
@@ -86,6 +118,7 @@ describe("source: duplicate detection and protocol by endpoint kind", () => {
     await pickEndpoint(user, source, "Endpoint", /^Incoming folder/);
     expect(await optionsOf(user, source, "Protocol")).toEqual([
       "Delimited files",
+      "PDF reports",
       "ASTM (does not suit this endpoint)",
     ]);
     await user.click(screen.getByRole("button", { name: "Save and apply" }));

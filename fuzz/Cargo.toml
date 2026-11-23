@@ -22,6 +22,7 @@ packie-config = { path = "../crates/packie-config" }
 packie-files = { path = "../crates/packie-files" }
 packie-hl7 = { path = "../crates/packie-hl7" }
 packie-ipc = { path = "../crates/packie-ipc" }
+packie-pdf = { path = "../crates/packie-pdf" }
 packie-transform = { path = "../crates/packie-transform" }
 
 [workspace]
@@ -113,3 +114,9 @@ test = false
 doc = false
 bench = false
 
+[[bin]]
+name = "pdf_read"
+path = "fuzz_targets/pdf_read.rs"
+test = false
+doc = false
+bench = false

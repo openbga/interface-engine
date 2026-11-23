@@ -5,8 +5,8 @@ use std::net::IpAddr;
 
 use super::{Endpoints, ProblemCode, Validator, count};
 use crate::endpoint::{
-    EndpointConfig, FolderSettings, KeepAlive, SerialSettings, SftpSettings, TcpClientSettings,
-    TcpListenerSettings, Transport,
+    Consumption, EndpointConfig, FolderSettings, KeepAlive, OnConsumed, SerialSettings,
+    SftpSettings, TcpClientSettings, TcpListenerSettings, Transport,
 };
 use crate::secret::SecretRef;
 
@@ -123,7 +123,7 @@ impl Validator {
         path: &str,
         pattern: &str,
         ignore_suffixes: &[String],
-        processed_directory: &str,
+        consumption: Consumption<'_>,
     ) {
         self.non_empty(path, "file_pattern", pattern);
         if pattern.contains(['/', '\\']) {
@@ -135,17 +135,41 @@ impl Validator {
         for (i, suffix) in ignore_suffixes.iter().enumerate() {
             self.non_empty(path, &format!("ignore_suffixes[{i}]"), suffix);
         }
-        self.non_empty(path, "processed_directory", processed_directory);
-        // Both separators, as the SFTP adapter normalizes them (and Windows reads them).
-        let absolute = processed_directory.starts_with(['/', '\\'])
-            || processed_directory.as_bytes().get(1) == Some(&b':');
-        if absolute
-            || processed_directory
-                .split(['/', '\\'])
-                .any(|part| part == "..")
-        {
+        let directories = [
+            ("processed_directory", Some(consumption.processed)),
+            ("filtered_directory", consumption.filtered),
+            ("invalid_directory", consumption.invalid),
+        ];
+        let mut seen: Vec<&str> = Vec::new();
+        for (field, directory) in directories {
+            let Some(directory) = directory else { continue };
+            self.inside_directory(path, field, directory);
+            let normalized = directory.trim().trim_matches(['/', '\\']);
+            if seen.contains(&normalized) {
+                self.schema(
+                    format!("{path}.{field}"),
+                    "must differ from the other processed, filtered and invalid directories",
+                );
+            }
+            seen.push(normalized);
+        }
+        if consumption.by_outcome() && consumption.on_consumed != OnConsumed::Move {
             self.schema(
-                format!("{path}.processed_directory"),
+                format!("{path}.on_consumed"),
+                "filtered_directory and invalid_directory need on_consumed move",
+            );
+        }
+    }
+
+    /// A directory relative to the source directory, without `..`.
+    fn inside_directory(&mut self, path: &str, field: &str, directory: &str) {
+        self.non_empty(path, field, directory);
+        // Both separators, as the SFTP adapter normalizes them (and Windows reads them).
+        let absolute =
+            directory.starts_with(['/', '\\']) || directory.as_bytes().get(1) == Some(&b':');
+        if absolute || directory.split(['/', '\\']).any(|part| part == "..") {
+            self.schema(
+                format!("{path}.{field}"),
                 "must be a directory inside the source directory",
             );
         }
@@ -166,12 +190,7 @@ impl Validator {
         if s.path.as_os_str().is_empty() {
             self.schema(format!("{path}.path"), "must not be empty");
         }
-        self.file_selection(
-            path,
-            &s.file_pattern,
-            &s.ignore_suffixes,
-            &s.processed_directory,
-        );
+        self.file_selection(path, &s.file_pattern, &s.ignore_suffixes, s.consumption());
         self.file_timing(path, s.poll_interval_seconds, s.stable_seconds);
     }
 
@@ -194,12 +213,7 @@ impl Validator {
         for (field, secret) in s.auth.secret_refs() {
             self.secret(&format!("{path}.auth.{field}"), secret);
         }
-        self.file_selection(
-            path,
-            &s.file_pattern,
-            &s.ignore_suffixes,
-            &s.processed_directory,
-        );
+        self.file_selection(path, &s.file_pattern, &s.ignore_suffixes, s.consumption());
         self.file_timing(path, s.poll_interval_seconds, s.stable_seconds);
         self.range(
             path,

@@ -53,16 +53,17 @@ pub use diff::{
     ApplyOutcome, ApplyReport, Change, ChannelChange, ChannelOutcome, ConfigDiff, EndpointChange,
 };
 pub use endpoint::{
-    Cidr, CidrError, EndpointConfig, FlowControl, FolderMode, FolderSettings, KeepAlive,
-    OnConsumed, Parity, SerialSettings, SftpAuth, SftpSettings, StopBits, TcpClientSettings,
-    TcpListenerSettings, Transport, WriteMode,
+    Cidr, CidrError, Consumption, EndpointConfig, FlowControl, FolderMode, FolderSettings,
+    KeepAlive, OnConsumed, Parity, SerialSettings, SftpAuth, SftpSettings, StopBits,
+    TcpClientSettings, TcpListenerSettings, Transport, WriteMode,
 };
 pub use error::ConfigError;
 pub use notifications::{EmailSettings, MailSecurity, NotificationSettings, WebhookSettings};
 pub use protocol::{
     AckMode, AstmRole, AstmSettings, AuClass, AuFormat, AuFraming, AuProfile, AuSettings, Charset,
-    Column, ColumnType, DelimitedSettings, Hl7Settings, LineEnding, OnExists, ProcessingId,
-    ProtocolSettings, RecordMode, ReplyType,
+    Column, ColumnType, DelimitedSettings, FieldPosition, Hl7FileSettings, Hl7Settings, LineEnding,
+    OnExists, OneOrMore, PdfField, PdfReportSettings, ProcessingId, ProtocolSettings, RecordMode,
+    ReplyType,
 };
 pub use runtime::{AlertThresholds, DiagnosticsOverrides, RuntimeConfig, SCHEMA_VERSION};
 pub use secret::SecretRef;

@@ -1,0 +1,23 @@
+{
+  "id": "pdf-reports",
+  "title": "PDF reports",
+  "summary": "Reading report files with a template and embedding them in the message sent on.",
+  "routes": [],
+  "sections": [
+    {
+      "title": "The template",
+      "paragraphs": [
+        "A PDF report source reads report files, one message per file. Its template (a JSON object) lists the fields to read: the label printed on the report and whether the value is right of it or below. Start from the newborn screening preset.",
+        "A value the report does not print is empty. A report whose labels do not match is stored invalid with the reason and nothing is sent; correct the template and resend it as a new message.",
+        "Test with a PDF, under the template, reads a report you choose and shows the fields and the message a destination would get; nothing is stored or sent. On an invalid report, Test against the current template reads it again.",
+        "In the message detail, a stored report's Text view is the text read from it, page by page, with <HT> between phrases; Hex shows the file. Fields lists the values the channel's template reads."
+      ]
+    },
+    {
+      "title": "Folders and embedding",
+      "paragraphs": [
+        "On the folder or SFTP endpoint, under After a file is read, a filtered and an unreadable reports folder keep left-out and unreadable reports apart. A mapping embeds the report with report.file_base64; an HL7 v2 files destination writes each message as a file for the receiver to collect."
+      ]
+    }
+  ]
+}

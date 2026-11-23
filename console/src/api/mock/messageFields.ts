@@ -94,7 +94,7 @@ function astmFields(text: string): MessageField[] | null {
 }
 
 /**
- * The fields the engine would list for an original (`GetMessage`'s `fields`): HL7 and ASTM by
+ * The fields the engine would list for an original (`getMessageFields`): HL7 and ASTM by
  * the paths filters use, a reason in words for what does not parse (`parses` false: the
  * message is invalid) or has no field list.
  */
@@ -105,7 +105,7 @@ export function parsedFields(text: string, protocol: Protocol, parses = true): M
     unavailable,
   });
   if (protocol !== "hl7_mllp" && protocol !== "astm") {
-    return none("Fields are listed for HL7 and ASTM messages.");
+    return none("Fields are listed for HL7, ASTM and PDF report messages.");
   }
   const all = !parses ? null : protocol === "hl7_mllp" ? hl7Fields(text) : astmFields(text);
   if (all === null) {

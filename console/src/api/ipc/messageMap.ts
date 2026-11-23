@@ -176,6 +176,7 @@ export function detailFromIpc(raw: RawRecord, endpointLabel: string | undefined)
     respondedAt: raw.responded_at,
     abortReason: raw.abort_reason,
     reasonCode: raw.reason_code,
+    reasonDetail: raw.reason_detail,
     duplicateOf: raw.duplicate_of,
     revisionOf: raw.revision_of,
     revisedBy: raw.revised_by,

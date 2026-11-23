@@ -22,6 +22,7 @@ packie-diagnostics = { workspace = true }
 packie-engine = { workspace = true }
 packie-hl7 = { path = "../packie-hl7" }
 packie-files = { path = "../packie-files" }
+packie-pdf = { path = "../packie-pdf" }
 packie-ipc = { workspace = true }
 packie-store = { path = "../packie-store" }
 packie-transform = { path = "../packie-transform" }
