@@ -49,7 +49,8 @@ poll_interval_seconds: number,
  */
 file_pattern: string, 
 /**
- * Include sub-directories (except `processed_directory`). Default `false`.
+ * Include sub-directories (except the processed, filtered and invalid directories).
+ * Default `false`.
  */
 recursive: boolean, 
 /**
@@ -68,6 +69,14 @@ on_consumed: OnConsumed,
  * Relative to `remote_directory`. Default `processed`.
  */
 processed_directory: string, 
+/**
+ * As [`FolderSettings::filtered_directory`].
+ */
+filtered_directory: string | null, 
+/**
+ * As [`FolderSettings::invalid_directory`].
+ */
+invalid_directory: string | null, 
 /**
  * Default `atomic_rename`.
  */

@@ -187,6 +187,10 @@ pub enum Request {
     /// Send a test message to every configured notification target (audited). Answered
     /// with [`Response::NotificationTested`].
     TestNotification,
+    /// Read a PDF report with a template and map it as a destination would, storing and
+    /// sending nothing (audited). Answered with [`Response::PdfReportTested`]; an invalid
+    /// template or destination fails with `invalid_config`.
+    TestPdfReport(crate::pdf::PdfReportTest),
     /// Record that the client is about to write an export it built itself (audited as
     /// `client_export`; refused with `unavailable` when the audit log cannot record it, in
     /// which case the client writes nothing). Answered with [`Response::Done`].
@@ -373,6 +377,8 @@ pub enum Response {
     },
     /// To [`Request::TestEndpoint`].
     EndpointTested(crate::checks::ProbeReport),
+    /// To [`Request::TestPdfReport`].
+    PdfReportTested(Box<crate::pdf::PdfReportTestResult>),
     /// To [`Request::TestNotification`].
     NotificationTested {
         /// One result per configured target; empty when none is configured.

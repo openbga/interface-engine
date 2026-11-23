@@ -3,4 +3,4 @@
 /**
  * Protocol spoken by a connector or observed by a bridge tap.
  */
-export type ProtocolKind = "astm" | "au" | "hl7_mllp" | "delimited_file" | "raw";
+export type ProtocolKind = "astm" | "au" | "hl7_mllp" | "hl7_file" | "delimited_file" | "pdf_report" | "raw";

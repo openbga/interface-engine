@@ -30,6 +30,7 @@ pub mod checks;
 mod client;
 pub mod frame;
 pub mod messages;
+pub mod pdf;
 pub mod protocol;
 pub mod reports;
 mod server;

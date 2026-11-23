@@ -2,7 +2,8 @@
 //! keeps the destination connection, takes the head of the queue in receipt order,
 //! commits the attempt before the first byte, waits for the acknowledgement the
 //! delivery requires and records how the attempt ended. Protocol sending lives in
-//! `conn`, attempt outcomes in `outcome`, file destinations in `file`.
+//! `conn`, attempt outcomes in `outcome`, file destinations (delimited and HL7 files) in
+//! `file`.
 
 mod conn;
 mod file;
@@ -112,7 +113,8 @@ struct Worker {
     reconnect: Backoff,
     listener: Option<Box<dyn Acceptor>>,
     conn: Option<Conn>,
-    /// A delimited-file destination writes through the endpoint's file sink instead.
+    /// A file destination (delimited or HL7 file) writes through the endpoint's file sink
+    /// instead.
     sink: Option<Box<dyn FileSink>>,
     endpoint: EndpointConfig,
     role: Role,
@@ -221,7 +223,10 @@ impl Worker {
     }
 
     async fn attach(&mut self) -> Result<(), LinkError> {
-        if matches!(self.destination.protocol, ProtocolSettings::Delimited(_)) {
+        if matches!(
+            self.destination.protocol,
+            ProtocolSettings::Delimited(_) | ProtocolSettings::Hl7File(_)
+        ) {
             self.sink = Some(self.cx.transports.file_sink(&self.endpoint)?);
             self.cx.shared.connected(self.role, None);
             return Ok(());
@@ -382,12 +387,10 @@ impl Worker {
         }
         let (_, compiled) = self.cx.current_compiled();
         let compiled = compiled?;
-        let output = compiled
-            .parse(&pending.original)
+        let output = crate::message::pipeline::parse(&compiled, &pending.original)
+            .await
             .map_err(|reason| OutputError(format!("parse: {reason}")))
-            .and_then(|(parsed, _)| {
-                compiled.output(self.destination.id, &parsed, &pending.original)
-            });
+            .and_then(|parsed| compiled.output(self.destination.id, &parsed, &pending.original));
         let store = &self.cx.store;
         let recorded = match &output {
             Ok(body) => {

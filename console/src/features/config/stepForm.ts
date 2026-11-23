@@ -18,10 +18,22 @@ export interface StepFormValues {
   length: string;
   find: string;
   with: string;
+  /** `strip_suffix`: the path of the field whose text is removed. */
+  from: string;
 }
 
 export function emptyStep(kind: StepKind = "trim"): StepFormValues {
-  return { kind, chars: "", separator: "", take: "0", start: "0", length: "", find: "", with: "" };
+  return {
+    kind,
+    chars: "",
+    separator: "",
+    take: "0",
+    start: "0",
+    length: "",
+    find: "",
+    with: "",
+    from: "",
+  };
 }
 
 export function stepToValues(step: Step): StepFormValues {
@@ -39,6 +51,8 @@ export function stepToValues(step: Step): StepFormValues {
       };
     case "replace":
       return { ...base, find: step.find, with: step.with };
+    case "strip_suffix":
+      return { ...base, from: step.from };
     default:
       return base;
   }
@@ -60,6 +74,8 @@ export function valuesToStep(values: StepFormValues): Step {
     }
     case "replace":
       return { step: "replace", find: values.find, with: values.with };
+    case "strip_suffix":
+      return { step: "strip_suffix", from: values.from.trim() };
     default:
       return { step: values.kind };
   }

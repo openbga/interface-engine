@@ -9,6 +9,7 @@ import type { EndpointTest } from "./EndpointTest";
 import type { ExportRequest } from "./ExportRequest";
 import type { LogFilter } from "./LogFilter";
 import type { MessageQuery } from "./MessageQuery";
+import type { PdfReportTest } from "./PdfReportTest";
 import type { ResendRequest } from "./ResendRequest";
 import type { RuntimeConfig } from "./RuntimeConfig";
 import type { TestHook } from "./TestHook";
@@ -104,7 +105,7 @@ message_id: string, } | { "type": "get_message_body" } & BodyRequest | { "type":
  * An absolute directory that does not exist or is empty; absent for a new
  * directory under `backup.directory`.
  */
-directory: string | null, } | { "type": "backup_status" } | { "type": "list_serial_ports" } | { "type": "test_endpoint" } & EndpointTest | { "type": "test_notification" } | { "type": "record_client_export", 
+directory: string | null, } | { "type": "backup_status" } | { "type": "list_serial_ports" } | { "type": "test_endpoint" } & EndpointTest | { "type": "test_notification" } | { "type": "test_pdf_report" } & PdfReportTest | { "type": "record_client_export", 
 /**
  * What is exported.
  */

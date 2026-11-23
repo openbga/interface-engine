@@ -321,6 +321,15 @@ pub trait MessageStore: Send + Sync + 'static {
     /// `received` → `invalid` with a reason code.
     fn record_invalid(&self, message: MessageId, reason: String) -> BoxFuture<'_, StoreResult<()>>;
 
+    /// `received` → `invalid` with a reason code and what failed (`reason_detail`, in
+    /// template terms; a PDF report).
+    fn record_invalid_detailed(
+        &self,
+        message: MessageId,
+        reason: String,
+        detail: String,
+    ) -> BoxFuture<'_, StoreResult<()>>;
+
     /// `received` → `filtered` with a reason code.
     fn record_filtered(&self, message: MessageId, reason: String)
     -> BoxFuture<'_, StoreResult<()>>;

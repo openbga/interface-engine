@@ -6,8 +6,8 @@ use packie_core::EndpointKind;
 
 use super::{MAX_MESSAGE, ProblemCode, Role, Validator};
 use crate::protocol::{
-    AckMode, AstmSettings, AuFormat, AuSettings, ColumnType, DelimitedSettings, Hl7Settings,
-    ProtocolSettings, RecordMode,
+    AckMode, AstmSettings, AuFormat, AuSettings, ColumnType, DelimitedSettings, Hl7FileSettings,
+    Hl7Settings, OnExists, ProtocolSettings, RecordMode,
 };
 
 impl Validator {
@@ -27,7 +27,9 @@ impl Validator {
                 matches!(kind, EndpointKind::TcpClient | EndpointKind::TcpListener),
                 "a tcp_client or tcp_listener endpoint",
             ),
-            ProtocolSettings::Delimited(_) => (
+            ProtocolSettings::Delimited(_)
+            | ProtocolSettings::Hl7File(_)
+            | ProtocolSettings::PdfReport(_) => (
                 matches!(kind, EndpointKind::Folder | EndpointKind::Sftp),
                 "a folder or sftp endpoint",
             ),
@@ -48,10 +50,13 @@ impl Validator {
             ProtocolSettings::Astm(s) => self.astm(&settings, s),
             ProtocolSettings::Au(s) => self.au(&settings, s),
             ProtocolSettings::Hl7(s) => self.hl7(&settings, s, role),
+            ProtocolSettings::Hl7File(s) => self.hl7_file(&settings, s, role),
             ProtocolSettings::Delimited(s) => self.delimited(&settings, s, role),
+            ProtocolSettings::PdfReport(s) => self.pdf_report(&settings, s, role),
             ProtocolSettings::Raw => self.schema(
                 format!("{path}.protocol"),
-                "raw is only for bridge taps; use astm, au, hl7_mllp or delimited_file",
+                "raw is only for bridge taps; use astm, au, hl7_mllp, hl7_file, delimited_file or \
+                 pdf_report",
             ),
         }
     }
@@ -154,24 +159,16 @@ impl Validator {
                 "a source acknowledges: original or enhanced",
             );
         }
-        if !hl7_version_ok(&s.version) {
-            self.schema(format!("{path}.version"), "must be 2.x or 2.x.y");
-        }
-        for (field, value) in [
-            ("sending_application", &s.sending_application),
-            ("sending_facility", &s.sending_facility),
-            ("receiving_application", &s.receiving_application),
-            ("receiving_facility", &s.receiving_facility),
-        ] {
-            if value.chars().count() > 180 {
-                self.schema(format!("{path}.{field}"), "must be at most 180 characters");
-            }
-        }
-        self.range(
+        self.hl7_header(
             path,
-            "max_message_bytes",
+            &s.version,
+            [
+                &s.sending_application,
+                &s.sending_facility,
+                &s.receiving_application,
+                &s.receiving_facility,
+            ],
             s.max_message_bytes,
-            1024..=MAX_MESSAGE,
         );
         self.range(path, "frame_timeout_ms", s.frame_timeout_ms, 1000..=300_000);
         let types = &s.ack_message_types;
@@ -191,6 +188,54 @@ impl Validator {
         }
     }
 
+    /// The settings HL7 MLLP and HL7 file connectors share: the generated header and the
+    /// message size.
+    fn hl7_header(&mut self, path: &str, version: &str, ids: [&String; 4], max_bytes: u64) {
+        if !hl7_version_ok(version) {
+            self.schema(format!("{path}.version"), "must be 2.x or 2.x.y");
+        }
+        let fields = [
+            "sending_application",
+            "sending_facility",
+            "receiving_application",
+            "receiving_facility",
+        ];
+        for (field, value) in fields.into_iter().zip(ids) {
+            if value.chars().count() > 180 {
+                self.schema(format!("{path}.{field}"), "must be at most 180 characters");
+            }
+        }
+        self.range(path, "max_message_bytes", max_bytes, 1024..=MAX_MESSAGE);
+    }
+
+    fn hl7_file(&mut self, path: &str, s: &Hl7FileSettings, role: Role) {
+        if role == Role::Source {
+            self.err(
+                ProblemCode::EndpointKindNotAllowed,
+                path.trim_end_matches(".settings").to_owned() + ".protocol",
+                "hl7_file only writes files; it cannot be a source (read HL7 with hl7_mllp)",
+            );
+        }
+        self.hl7_header(
+            path,
+            &s.version,
+            [
+                &s.sending_application,
+                &s.sending_facility,
+                &s.receiving_application,
+                &s.receiving_facility,
+            ],
+            s.max_message_bytes,
+        );
+        self.file_name(path, Some(&s.file_name).filter(|f| !f.is_empty()), role);
+        if s.on_exists == OnExists::Append {
+            self.schema(
+                format!("{path}.on_exists"),
+                "must be suffix, overwrite or fail: a file holds one message",
+            );
+        }
+    }
+
     fn delimited(&mut self, path: &str, s: &DelimitedSettings, role: Role) {
         if !matches!(s.delimiter.as_str(), "," | ";" | "|" | "\t") {
             self.schema(format!("{path}.delimiter"), "must be , ; | or a tab");
@@ -206,8 +251,13 @@ impl Validator {
             s.max_file_bytes,
             1024..=1_073_741_824,
         );
+        self.file_name(path, s.file_name.as_ref(), role);
+    }
+
+    /// The `file_name` template of a file connector: required for a destination.
+    fn file_name(&mut self, path: &str, file_name: Option<&String>, role: Role) {
         let name = format!("{path}.file_name");
-        match (&s.file_name, role) {
+        match (file_name, role) {
             (None, Role::Destination) => {
                 self.schema(name, "a destination needs a file name template");
             }
@@ -284,7 +334,7 @@ fn message_type_ok(kind: &str) -> bool {
             .all(|b| b.is_ascii_uppercase() || b.is_ascii_digit())
 }
 
-fn column_name_ok(name: &str) -> bool {
+pub(super) fn column_name_ok(name: &str) -> bool {
     let mut bytes = name.bytes();
     bytes.next().is_some_and(|b| b.is_ascii_lowercase())
         && name.len() <= 41

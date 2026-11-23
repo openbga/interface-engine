@@ -5,6 +5,7 @@ use std::borrow::Cow;
 use crate::au::{HEADER_FIELDS, TEST_FIELDS};
 use crate::error::{ModelError, PathError};
 use crate::path::{ASTM_RECORD_HINT, FieldRef, Frame, Path, Scope, Syntax, record_name_ok};
+use crate::pdf::REPORT_FIELDS;
 
 /// A parsed protocol message that filters read and mappings read and write.
 ///
@@ -73,7 +74,7 @@ pub(crate) fn repeated_group(model: &dyn Model) -> Option<&'static str> {
     let records: &[&'static str] = match model.syntax() {
         Syntax::Hl7 => &["PID", "OBR", "SPM"],
         Syntax::Astm => &["P", "O"],
-        Syntax::Au | Syntax::Delimited => &[],
+        Syntax::Au | Syntax::Delimited | Syntax::Pdf => &[],
     };
     records
         .iter()
@@ -126,6 +127,15 @@ impl Schema {
         }
     }
 
+    /// PDF reports with the template's field names (read-only).
+    #[must_use]
+    pub fn pdf(fields: impl IntoIterator<Item = impl Into<String>>) -> Self {
+        Self {
+            syntax: Syntax::Pdf,
+            columns: fields.into_iter().map(Into::into).collect(),
+        }
+    }
+
     /// The path syntax of this schema.
     #[must_use]
     pub const fn syntax(&self) -> Syntax {
@@ -174,6 +184,7 @@ impl Schema {
         match (&self.syntax, path.field()) {
             (Syntax::Au, FieldRef::Name(name)) => check_au_name(path, name),
             (Syntax::Delimited, FieldRef::Name(name)) => self.check_column(name),
+            (Syntax::Pdf, FieldRef::Name(name)) => self.check_pdf_name(path, name),
             _ => Ok(()),
         }
     }
@@ -189,6 +200,7 @@ impl Schema {
                 Syntax::Astm => ASTM_RECORD_HINT,
                 Syntax::Au => "AU messages have one repeating record, `test`",
                 Syntax::Delimited => "delimited messages have one repeating record, `col`",
+                Syntax::Pdf => "PDF reports have no repeating record",
             }
             .to_owned());
         }
@@ -201,6 +213,7 @@ impl Schema {
     fn check_writable(&self, path: &Path) -> Result<(), String> {
         match (self.syntax, path.record(), path.field()) {
             (Syntax::Au, ..) => Err("AU messages are read-only".to_owned()),
+            (Syntax::Pdf, ..) => Err("PDF reports are read-only".to_owned()),
             (Syntax::Hl7, Some("MSH"), FieldRef::Number(1 | 2)) => {
                 Err("MSH.1 and MSH.2 are fixed by the encoding characters".to_owned())
             }
@@ -216,11 +229,29 @@ impl Schema {
     fn check_creatable(&self, name: &str) -> Result<(), String> {
         match (self.syntax, name) {
             (Syntax::Au, _) => Err("AU messages are read-only".to_owned()),
+            (Syntax::Pdf, _) => Err("PDF reports are read-only".to_owned()),
             (Syntax::Hl7, "MSH") => Err("a message has one MSH".to_owned()),
             (Syntax::Astm, "H" | "L") => {
                 Err("an ASTM message has one H and one L record".to_owned())
             }
             _ => Ok(()),
+        }
+    }
+
+    fn check_pdf_name(&self, path: &Path, name: &str) -> Result<(), String> {
+        let known = match path.record() {
+            Some("report") => REPORT_FIELDS.contains(&name),
+            _ => self.columns.iter().any(|c| c == name),
+        };
+        if known {
+            Ok(())
+        } else if path.record() == Some("report") {
+            Err(format!(
+                "unknown report value `{name}`; known: {}",
+                REPORT_FIELDS.join(", ")
+            ))
+        } else {
+            Err(format!("unknown template field `{name}`"))
         }
     }
 

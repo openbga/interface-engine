@@ -14,6 +14,7 @@ const KINDS: { id: StepKind; label: string }[] = [
   { id: "split", label: "Take one part of a split" },
   { id: "slice", label: "Keep part of the text" },
   { id: "replace", label: "Replace text" },
+  { id: "strip_suffix", label: "Remove another field from the end" },
   { id: "upper", label: "Upper case" },
   { id: "lower", label: "Lower case" },
 ];
@@ -27,6 +28,8 @@ const KIND_HELP: Record<StepKind, string> = {
   slice:
     "Keeps at most Length characters from Start (the first character is 0). Empty when Start is past the end.",
   replace: "Replaces every occurrence of the text, exactly as typed, with the other text.",
+  strip_suffix:
+    "Removes the text of another field from the end, ignoring case: TEST BABY DOE without DOE becomes TEST BABY. When the text does not end with it, the result is empty.",
   upper: "Changes letters to upper case.",
   lower: "Changes letters to lower case.",
 };
@@ -91,6 +94,14 @@ function StepFields({ name }: { name: string }) {
             validate={wholeNumber({ min: 1, max: 65_535 })}
           />
         </>
+      )}
+      {kind === "strip_suffix" && (
+        <TextInput
+          name={`${name}.from`}
+          label="Field to remove"
+          isRequired
+          description="A path of the source message, for example field.last_name."
+        />
       )}
       {kind === "replace" && (
         <>

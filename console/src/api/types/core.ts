@@ -93,7 +93,14 @@ export type StopReason =
   | "not_implemented";
 
 /** Protocol tags of docs/spec/configuration.md §6.4. */
-export type Protocol = "astm" | "au" | "hl7_mllp" | "delimited_file" | "raw";
+export type Protocol =
+  | "astm"
+  | "au"
+  | "hl7_mllp"
+  | "hl7_file"
+  | "delimited_file"
+  | "pdf_report"
+  | "raw";
 
 export type DeliveryState =
   | "queued"

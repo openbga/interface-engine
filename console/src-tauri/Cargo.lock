@@ -2795,6 +2795,7 @@ dependencies = [
 name = "packie-transform"
 version = "0.2.0"
 dependencies = [
+ "base64 0.23.1",
  "jiff",
  "packie-astm",
  "packie-au",

@@ -166,6 +166,7 @@ export class MessageStore extends MessageCommands {
       responseCode: response?.code ?? null,
       respondedAt: response === null ? null : iso(response.atMs),
       ...(created === null ? u.reasonOf(i, kind) : { reasonCode: null, abortReason: null }),
+      reasonDetail: null,
       duplicateOf: created === null && kind === K_DUPLICATE ? `msg-${u.duplicateOf(i)}` : null,
       revisionOf: created === null ? this.idOf(this.revisions.revisionOf(i)) : null,
       revisedBy: created === null ? this.idOf(this.revisions.revisedBy(i)) : null,

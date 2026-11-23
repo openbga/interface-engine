@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ConfigDocument } from "../types";
 import { documentToWire } from "./configDocument";
+import { DEFAULT_CONSUMPTION } from "./endpointConfig";
 import { AU, base, destination, message, sftp, withNew } from "./test/newItems";
 import { documentProblems } from "./test/specSchema";
 
@@ -48,6 +49,7 @@ describe("new endpoints are written sparse", () => {
           mode: "watch",
           pollIntervalSec: 5,
           filePattern: "*",
+          ...DEFAULT_CONSUMPTION,
         },
       ],
       [],
@@ -113,6 +115,7 @@ describe("new endpoints are written sparse", () => {
           mode: "poll",
           pollIntervalSec: 30,
           filePattern: "*.csv",
+          ...DEFAULT_CONSUMPTION,
         },
       ],
       [],
@@ -241,6 +244,7 @@ describe("everything written has the shape the engine accepts", () => {
           mode: "poll",
           pollIntervalSec: 2,
           filePattern: "*.csv",
+          ...DEFAULT_CONSUMPTION,
         },
         { ...sftp, id: "n5" },
         { ...sftp, id: "n6", authMethod: "private_key", passphraseSecretName: "p" },

@@ -191,6 +191,7 @@ fn message_row(row: &Row<'_>) -> rusqlite::Result<MessageRecord> {
         responded_at: row.get("responded_at")?,
         abort_reason: row.get("abort_reason")?,
         reason_code: row.get("reason_code")?,
+        reason_detail: row.get("reason_detail")?,
         duplicate_of: optional_parse(row.get("duplicate_of")?)?,
         revision_of: optional_parse(row.get("revision_of")?)?,
         revised_by: None,

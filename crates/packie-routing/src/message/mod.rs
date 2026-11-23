@@ -11,6 +11,7 @@ mod au;
 mod delivery;
 mod files;
 mod hl7;
+mod pdf;
 pub(crate) mod pipeline;
 mod source;
 mod sqlite_store;
@@ -215,12 +216,14 @@ impl MessageContext {
                 }
             }
             Ok(pipeline::Routed::Filtered(_)) => store_counter(&counters.filtered),
-            Ok(pipeline::Routed::Invalid(reason)) => {
+            Ok(pipeline::Routed::Invalid(invalid)) => {
                 store_counter(&counters.invalid);
+                let reason = invalid.code.as_str();
                 tracing::warn!(
                     event = "message.invalid",
                     message_id = %message,
-                    error_code = reason.as_str(),
+                    error_code = reason,
+                    reason_detail = invalid.detail.as_deref(),
                     "Channel {} message {message} is invalid ({reason})",
                     self.shared.id
                 );
@@ -229,6 +232,28 @@ impl MessageContext {
         }
         routed.ok()
     }
+}
+
+/// What `destination` of `channel` would be given for `original`, storing and sending
+/// nothing (`test_pdf_report`); `Err` names the parse or transform failure.
+pub(crate) async fn preview(
+    channel: &MessageChannel,
+    destination: ConnectorId,
+    original: &[u8],
+) -> Result<Vec<u8>, String> {
+    let compiled = transform::Compiled::compile(channel, 0, "channel").map_err(|problems| {
+        format!(
+            "the definition does not compile ({} problems)",
+            problems.len()
+        )
+    })?;
+    let compiled = Arc::new(compiled);
+    let parsed = pipeline::parse(&compiled, original)
+        .await
+        .map_err(|invalid| format!("parse: {invalid}"))?;
+    compiled
+        .output(destination, &parsed, original)
+        .map_err(|error| error.0)
 }
 
 fn store_counter(counter: &std::sync::atomic::AtomicU64) {

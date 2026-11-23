@@ -14,8 +14,9 @@ fuzz_target!(|data: &[u8]| {
         Schema::astm(),
         Schema::au(),
         Schema::delimited(["sample_id", "result", "c0"]),
+        Schema::pdf(["sample_id", "dob"]),
     ];
-    for syntax in [Syntax::Hl7, Syntax::Astm, Syntax::Au, Syntax::Delimited] {
+    for syntax in [Syntax::Hl7, Syntax::Astm, Syntax::Au, Syntax::Delimited, Syntax::Pdf] {
         let Ok(path) = Path::parse(syntax, text) else {
             continue;
         };

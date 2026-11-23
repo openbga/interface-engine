@@ -1,32 +1,62 @@
-//! The parsed fields of a stored message's original (`GetMessage`): every non-empty leaf
-//! by the path filters and mappings use (`docs/spec/configuration.md` §8), in message
-//! order. Values are message content and are never logged; only paths are, at debug level.
+//! The parsed fields of a stored message's original (`GetMessageFields`): every non-empty
+//! leaf by the path filters and mappings use (`docs/spec/configuration.md` §8), in message
+//! order; for a PDF report, the template's fields (`docs/spec/pdf-reports.md` §6). Values
+//! are message content and are never logged; only paths are, at debug level.
 
 use std::collections::HashMap;
 
+use packie_config::RuntimeConfig;
 use packie_core::{ProtocolKind, hex_dump_bytes};
 use packie_ipc::messages::{
     BodyFormat, BodyRequest, BodySelector, FieldValue, MAX_FIELDS, MessageRecord, ParsedFields,
 };
-use packie_transform::{AstmModel, Hl7Model, Model, Path};
+use packie_transform::{AstmModel, Hl7Model, Model, Path, PdfModel};
 
 use crate::registry::ChannelRegistry;
 
-const NO_LIST: &str = "Fields are listed for HL7 and ASTM messages.";
+const NO_LIST: &str = "Fields are listed for HL7, ASTM and PDF report messages.";
 const NO_BODY: &str = "The original body is not available in full.";
 
 /// Repetitions, each a list of components, each a list of subcomponent texts.
 type Tree<'a> = Vec<Vec<Vec<&'a str>>>;
 
-/// The fields of `record`'s original, or why they are not listed.
-pub(crate) async fn of(registry: &dyn ChannelRegistry, record: &MessageRecord) -> ParsedFields {
+/// The fields of `record`'s original, or why they are not listed. A PDF report is read with
+/// its channel's template in `config`.
+pub(crate) async fn of(
+    registry: &dyn ChannelRegistry,
+    config: &RuntimeConfig,
+    record: &MessageRecord,
+) -> ParsedFields {
     let protocol = record.summary.protocol;
-    if !matches!(protocol, ProtocolKind::Hl7 | ProtocolKind::Astm) {
+    if !matches!(
+        protocol,
+        ProtocolKind::Hl7 | ProtocolKind::Astm | ProtocolKind::PdfReport
+    ) {
         return unavailable(NO_LIST.to_owned());
     }
     match original(registry, record).await {
+        Ok(bytes) if protocol == ProtocolKind::PdfReport => {
+            crate::pdf_view::fields(config, record, bytes).await
+        }
         Ok(bytes) => of_bytes(protocol, &bytes),
         Err(_) => unavailable(NO_BODY.to_owned()),
+    }
+}
+
+/// The fields a template read from a report: the non-empty `field.` values in template
+/// order, then `report.pages`.
+pub(crate) fn of_report(report: packie_pdf::Report) -> ParsedFields {
+    let pages = report.pages.to_string();
+    let model = PdfModel::new(report.fields.clone(), report.pages, Vec::new());
+    let mut collector = Collector::default();
+    for (name, value) in &report.fields {
+        collector.push(&model, format!("field.{name}"), value);
+    }
+    collector.push(&model, "report.pages".to_owned(), &pages);
+    ParsedFields {
+        fields: collector.fields,
+        truncated: collector.truncated,
+        unavailable: None,
     }
 }
 
@@ -59,7 +89,7 @@ pub(crate) fn of_bytes(protocol: ProtocolKind, bytes: &[u8]) -> ParsedFields {
     }
 }
 
-fn unavailable(reason: String) -> ParsedFields {
+pub(crate) fn unavailable(reason: String) -> ParsedFields {
     ParsedFields {
         fields: Vec::new(),
         truncated: false,
@@ -395,6 +425,33 @@ L|1|N\r";
                 )
             );
         }
+    }
+
+    #[test]
+    fn a_report_lists_its_non_empty_fields_in_template_order_then_its_pages() {
+        let report = packie_pdf::Report {
+            pages: 2,
+            fields: vec![
+                ("sample_id".to_owned(), "SYN-0001".to_owned()),
+                ("gender".to_owned(), String::new()),
+                ("dob".to_owned(), "01/02/2026".to_owned()),
+            ],
+        };
+        let listed = of_report(report);
+        let paths: Vec<(&str, &str)> = listed
+            .fields
+            .iter()
+            .map(|f| (f.path.as_str(), f.value.as_str()))
+            .collect();
+        assert_eq!(
+            paths,
+            [
+                ("field.sample_id", "SYN-0001"),
+                ("field.dob", "01/02/2026"),
+                ("report.pages", "2"),
+            ]
+        );
+        assert!(!listed.truncated && listed.unavailable.is_none());
     }
 
     #[test]

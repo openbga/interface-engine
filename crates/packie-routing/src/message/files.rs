@@ -284,7 +284,9 @@ fn receipt(
         source_endpoint_id: cx.channel.source.endpoint,
         source_peer: None,
         protocol: ProtocolKind::Delimited,
-        received_at: unit.modified.min(Timestamp::now()),
+        // When the engine takes the file, not the file's modified time: an old file dropped
+        // today is received today (and retention counts from today).
+        received_at: Timestamp::now(),
         config_version: cx.shared.config_version(),
         duplicate_detection: cx.channel.source.duplicate_detection,
         identifiers,

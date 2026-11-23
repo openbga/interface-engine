@@ -125,12 +125,14 @@ test("D-12: parsed fields come from the engine, with a find box and its limits s
 });
 
 test("D-12: fields say why none are listed", async ({ page }) => {
-  // AU is neither HL7 nor ASTM.
+  // AU is neither HL7, ASTM nor a PDF report.
   await openDetail(page, "?channel=ch-msg-au680");
   let viewer = original(page);
   await viewer.getByRole("button", { name: "Show original message" }).click();
   await showFields(viewer);
-  await expect(viewer.getByText("Fields are listed for HL7 and ASTM messages.")).toBeVisible();
+  await expect(
+    viewer.getByText("Fields are listed for HL7, ASTM and PDF report messages."),
+  ).toBeVisible();
   await expect(viewer.getByRole("table")).toHaveCount(0);
   // An HL7 message that does not parse.
   await openDetail(page, "?channel=ch-msg-billing&state=invalid&range=any");

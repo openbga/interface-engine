@@ -13,16 +13,16 @@ use packie_au::{
     StreamDecoder, WireEvent,
 };
 use packie_config::{
-    Charset, ColumnType, DelimitedSettings, Destination, Hl7Settings, LineEnding, MessageChannel,
-    OnExists, ProtocolSettings, RecordMode,
+    Charset, ColumnType, DelimitedSettings, Destination, Hl7FileSettings, Hl7Settings, LineEnding,
+    MessageChannel, OnExists, ProcessingId, ProtocolSettings, RecordMode,
 };
 use packie_core::{ConnectorId, MessageId, ProtocolKind, Timestamp};
 use packie_transform::{
-    AstmModel, AuModel, Filters, Hl7Model, Mapping, Model, Problem, RecordModel, Schema,
+    AstmModel, AuModel, Filters, Hl7Model, Mapping, Model, PdfModel, Problem, RecordModel, Schema,
 };
 
 use crate::message::store::Identifiers;
-use crate::message::{astm, au, hl7};
+use crate::message::{astm, au, hl7, pdf};
 
 /// How the source's bytes are parsed.
 enum SourceFormat {
@@ -30,15 +30,58 @@ enum SourceFormat {
     Astm(astm::SamplePosition),
     Au(AuConfig),
     Delimited(packie_files::Template),
+    Pdf(Box<packie_engine::pdf::PdfReader>),
 }
 
 /// How a destination's output is built and encoded.
 enum TargetFormat {
-    Hl7(Box<Hl7Settings>),
+    Hl7(Box<Hl7Target>),
     Astm,
     Au(AuConfig),
     Delimited(packie_files::Template),
     Raw,
+}
+
+/// What a new HL7 message gets from an HL7 destination's settings (MLLP or file).
+struct Hl7Target {
+    version: String,
+    sending_application: String,
+    sending_facility: String,
+    receiving_application: String,
+    receiving_facility: String,
+    processing_id: ProcessingId,
+    /// A file destination does not write a larger message.
+    max_bytes: Option<u64>,
+}
+
+impl Hl7Target {
+    fn mllp(s: &Hl7Settings) -> Self {
+        Self {
+            version: s.version.clone(),
+            sending_application: s.sending_application.clone(),
+            sending_facility: s.sending_facility.clone(),
+            receiving_application: s.receiving_application.clone(),
+            receiving_facility: s.receiving_facility.clone(),
+            processing_id: s.processing_id,
+            max_bytes: None,
+        }
+    }
+
+    const fn is_file(&self) -> bool {
+        self.max_bytes.is_some()
+    }
+
+    fn file(s: &Hl7FileSettings) -> Self {
+        Self {
+            version: s.version.clone(),
+            sending_application: s.sending_application.clone(),
+            sending_facility: s.sending_facility.clone(),
+            receiving_application: s.receiving_application.clone(),
+            receiving_facility: s.receiving_facility.clone(),
+            processing_id: s.processing_id,
+            max_bytes: Some(s.max_message_bytes),
+        }
+    }
 }
 
 struct CompiledDestination {
@@ -62,6 +105,7 @@ pub(crate) enum Parsed {
     Astm(AstmModel),
     Au(AuModel),
     Records(RecordModel),
+    Pdf(PdfModel),
 }
 
 impl Parsed {
@@ -71,6 +115,33 @@ impl Parsed {
             Self::Astm(m) => m,
             Self::Au(m) => m,
             Self::Records(m) => m,
+            Self::Pdf(m) => m,
+        }
+    }
+}
+
+/// Why original bytes do not parse: the `invalid` reason code, and for a PDF report what
+/// failed in template terms (`reason_detail`, never message content).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct Invalid {
+    pub(crate) code: String,
+    pub(crate) detail: Option<String>,
+}
+
+impl Invalid {
+    pub(crate) fn code(code: impl Into<String>) -> Self {
+        Self {
+            code: code.into(),
+            detail: None,
+        }
+    }
+}
+
+impl std::fmt::Display for Invalid {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.detail {
+            Some(detail) => write!(f, "{} ({detail})", self.code),
+            None => f.write_str(&self.code),
         }
     }
 }
@@ -114,32 +185,43 @@ impl Compiled {
         }
     }
 
-    /// Parses original bytes with their identifiers; `Err` is the `invalid` reason code.
-    pub(crate) fn parse(&self, original: &[u8]) -> Result<(Parsed, Identifiers), String> {
+    /// Parses original bytes with their identifiers.
+    pub(crate) fn parse(&self, original: &[u8]) -> Result<(Parsed, Identifiers), Invalid> {
         match &self.source {
             SourceFormat::Hl7 => {
-                let message = hl7::verdict(original).map_err(str::to_owned)?;
+                let message = hl7::verdict(original).map_err(Invalid::code)?;
                 let identifiers = hl7::identifiers(&message);
                 Ok((Parsed::Hl7(Hl7Model::from_message(message)), identifiers))
             }
             SourceFormat::Astm(sample) => {
-                let identifiers = astm::identifiers(original, *sample).map_err(str::to_owned)?;
-                let model = AstmModel::parse(original).map_err(|_| "unparseable".to_owned())?;
+                let identifiers = astm::identifiers(original, *sample).map_err(Invalid::code)?;
+                let model = AstmModel::parse(original).map_err(|_| Invalid::code("unparseable"))?;
                 Ok((Parsed::Astm(model), identifiers))
             }
             SourceFormat::Au(config) => {
                 let results =
-                    au_results(config, original).ok_or_else(|| "unparseable".to_owned())?;
+                    au_results(config, original).ok_or_else(|| Invalid::code("unparseable"))?;
                 let identifiers = au::identifiers(&results, "");
                 Ok((Parsed::Au(AuModel::from_results(&results)), identifiers))
             }
             SourceFormat::Delimited(template) => {
                 let rows = delimited_rows(original, template)
-                    .map_err(|e| delimited_reason(&e).to_owned())?;
+                    .map_err(|e| Invalid::code(delimited_reason(&e)))?;
                 let identifiers = delimited_identifiers(rows.first().map(Vec::as_slice));
                 Ok((Parsed::Records(RecordModel::from_rows(rows)), identifiers))
             }
+            SourceFormat::Pdf(source) => {
+                let report = pdf::read(source, original)?;
+                let identifiers = pdf::identifiers(&report.fields);
+                let model = PdfModel::new(report.fields, report.pages, original.to_vec());
+                Ok((Parsed::Pdf(model), identifiers))
+            }
         }
+    }
+
+    /// Whether parsing may take long (a PDF report) and runs on a blocking thread.
+    pub(crate) const fn parses_off_thread(&self) -> bool {
+        matches!(self.source, SourceFormat::Pdf(_))
     }
 
     /// The channel's filters.
@@ -156,8 +238,8 @@ impl Compiled {
     }
 
     /// The destination's output: without a mapping the original bytes (AU re-framed for
-    /// the destination's profile), otherwise the mapping applied to a new target and
-    /// encoded for the destination's protocol.
+    /// the destination's profile, an HL7 file's last segment ended), otherwise the mapping
+    /// applied to a new target and encoded for the destination's protocol.
     pub(crate) fn output(
         &self,
         destination: ConnectorId,
@@ -171,6 +253,10 @@ impl Compiled {
         };
         match (&compiled.mapping, &compiled.target) {
             (None, TargetFormat::Au(target)) => self.reframe_au(original, target),
+            // An HL7 file holds whole segments: the last one ends with CR too.
+            (None, TargetFormat::Hl7(target)) if target.is_file() && !original.ends_with(b"\r") => {
+                Ok([original, b"\r"].concat())
+            }
             (None, _) => Ok(original.to_vec()),
             (Some(mapping), target) => apply(mapping, message, target),
         }
@@ -214,7 +300,14 @@ fn apply(
                 _ => new_hl7(settings),
             };
             mapping.apply(source, &mut target).map_err(fail)?;
-            Ok(target.encode())
+            let bytes = target.encode();
+            let size = u64::try_from(bytes.len()).unwrap_or(u64::MAX);
+            match settings.max_bytes {
+                Some(limit) if size > limit => Err(OutputError(format!(
+                    "encode: the message is {size} bytes; max_message_bytes is {limit}"
+                ))),
+                _ => Ok(bytes),
+            }
         }
         TargetFormat::Astm => {
             let mut target = match message {
@@ -236,15 +329,15 @@ fn apply(
 }
 
 /// A new HL7 message with MSH-3..7 and MSH-10..12 from the connector settings.
-fn new_hl7(settings: &Hl7Settings) -> Hl7Model {
+fn new_hl7(settings: &Hl7Target) -> Hl7Model {
     let mut model = Hl7Model::new();
     let schema = Schema::hl7();
     let control_id = MessageId::generate().to_string();
     let timestamp = hl7::hl7_timestamp(Timestamp::now());
     let processing = match settings.processing_id {
-        packie_config::ProcessingId::P => "P",
-        packie_config::ProcessingId::D => "D",
-        packie_config::ProcessingId::T => "T",
+        ProcessingId::P => "P",
+        ProcessingId::D => "D",
+        ProcessingId::T => "T",
     };
     let fields = [
         ("MSH.3", settings.sending_application.as_str()),
@@ -311,20 +404,30 @@ fn compile_destination(
 
 fn source_format(protocol: &ProtocolSettings) -> SourceFormat {
     match protocol {
-        ProtocolSettings::Hl7(_) | ProtocolSettings::Raw => SourceFormat::Hl7,
+        // Validation refuses an hl7_file source.
+        ProtocolSettings::Hl7(_) | ProtocolSettings::Hl7File(_) | ProtocolSettings::Raw => {
+            SourceFormat::Hl7
+        }
         ProtocolSettings::Astm(settings) => SourceFormat::Astm(astm::sample_position(settings)),
         ProtocolSettings::Au(settings) => SourceFormat::Au(au::config(settings).0),
         ProtocolSettings::Delimited(settings) => SourceFormat::Delimited(stored_template(settings)),
+        ProtocolSettings::PdfReport(settings) => {
+            SourceFormat::Pdf(Box::new(packie_engine::pdf::PdfReader::new(settings)))
+        }
     }
 }
 
 fn target_format(protocol: &ProtocolSettings) -> TargetFormat {
     match protocol {
-        ProtocolSettings::Hl7(settings) => TargetFormat::Hl7(Box::new(settings.clone())),
+        ProtocolSettings::Hl7(settings) => TargetFormat::Hl7(Box::new(Hl7Target::mllp(settings))),
+        ProtocolSettings::Hl7File(settings) => {
+            TargetFormat::Hl7(Box::new(Hl7Target::file(settings)))
+        }
         ProtocolSettings::Astm(_) => TargetFormat::Astm,
         ProtocolSettings::Au(settings) => TargetFormat::Au(au::config(settings).0),
         ProtocolSettings::Delimited(settings) => TargetFormat::Delimited(template(settings)),
-        ProtocolSettings::Raw => TargetFormat::Raw,
+        // Validation refuses a PDF report destination.
+        ProtocolSettings::PdfReport(_) | ProtocolSettings::Raw => TargetFormat::Raw,
     }
 }
 
@@ -484,6 +587,9 @@ pub(crate) fn tap_identifiers(protocol: ProtocolKind, bytes: &[u8]) -> Identifie
             message_type: Some("au".into()),
             ..Identifiers::default()
         },
-        ProtocolKind::Delimited | ProtocolKind::Raw => Identifiers::default(),
+        ProtocolKind::Delimited
+        | ProtocolKind::Hl7File
+        | ProtocolKind::PdfReport
+        | ProtocolKind::Raw => Identifiers::default(),
     }
 }

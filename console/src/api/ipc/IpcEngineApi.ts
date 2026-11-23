@@ -34,6 +34,8 @@ import type {
   MessagePage,
   MessageQuery,
   NotificationResult,
+  PdfReportTestRequest,
+  PdfReportTestResult,
   ProbeReport,
   ReportFile,
   ResendRequest,
@@ -62,6 +64,8 @@ import { connectionStatusFrom } from "./settings";
 import {
   atEndpointZero,
   notificationResultFromIpc,
+  pdfResultFromIpc,
+  pdfTestToIpc,
   probeFromIpc,
   serialPortFromIpc,
 } from "./setup";
@@ -223,6 +227,15 @@ export class IpcEngineApi implements EngineApi {
       "notification_tested",
     );
     return results.map(notificationResultFromIpc);
+  }
+
+  /**
+   * Reads a PDF report with the editor's template. The engine names problems relative to the
+   * source connector (`settings.fields[0].label`) or under `destination.`.
+   */
+  async testPdfReport(request: PdfReportTestRequest): Promise<PdfReportTestResult> {
+    const result = await this.client.request(pdfTestToIpc(request), "pdf_report_tested");
+    return pdfResultFromIpc(result);
   }
 
   // Commands

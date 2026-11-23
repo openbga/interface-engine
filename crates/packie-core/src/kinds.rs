@@ -122,8 +122,12 @@ wire_enum! {
         Au => "au",
         /// HL7 v2.x over MLLP.
         Hl7 => "hl7_mllp",
+        /// HL7 v2.x messages written as files (destination only).
+        Hl7File => "hl7_file",
         /// Delimited files (CSV and similar).
         Delimited => "delimited_file",
+        /// Born-digital PDF reports read by a template (source only).
+        PdfReport => "pdf_report",
         /// Raw bytes, no parsing.
         Raw => "raw",
     }

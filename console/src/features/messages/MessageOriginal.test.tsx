@@ -121,7 +121,7 @@ describe("MessagePage", () => {
       });
 
       it("gives the engine's reason when it lists no fields", async () => {
-        const reason = "Fields are listed for HL7 and ASTM messages.";
+        const reason = "Fields are listed for HL7, ASTM and PDF report messages.";
         const api = stubApi({
           getMessageFields: async () => fieldsOf({ fields: [], unavailable: reason }),
         });

@@ -28,6 +28,8 @@ packie-routing = { path = "crates/packie-routing" }
 packie-notify = { path = "crates/packie-notify" }
 
 # External crates
+# Base64 for embedded PDF reports and the PDF test tool.
+base64 = "0.23"
 clap = { version = "4.6.7", features = ["derive"] }
 csv = "1.4.0"
 fs4 = { version = "1.1.0", default-features = false, features = ["sync"] }

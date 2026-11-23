@@ -27,12 +27,12 @@ describe("a message through the engine", () => {
       type: "message_fields",
       fields: [],
       truncated: false,
-      unavailable: "Fields are listed for HL7 and ASTM messages.",
+      unavailable: "Fields are listed for HL7, ASTM and PDF report messages.",
     }));
     expect(await api.getMessageFields("msg-1")).toEqual({
       fields: [],
       truncated: false,
-      unavailable: "Fields are listed for HL7 and ASTM messages.",
+      unavailable: "Fields are listed for HL7, ASTM and PDF report messages.",
     });
   });
 

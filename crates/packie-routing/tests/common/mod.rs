@@ -860,6 +860,15 @@ impl MessageStore for FailingStore {
         self.guard(|s| s.record_invalid(message, reason))
     }
 
+    fn record_invalid_detailed(
+        &self,
+        message: MessageId,
+        reason: String,
+        detail: String,
+    ) -> BoxFuture<'_, StoreResult<()>> {
+        self.guard(|s| s.record_invalid_detailed(message, reason, detail))
+    }
+
     fn record_filtered(
         &self,
         message: MessageId,

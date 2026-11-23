@@ -6,6 +6,9 @@
 //!   { "step": "strip_leading", "chars": "0" } ]
 //! ```
 //!
+//! `strip_suffix` is the one step that reads another field: the text at its `from` path (an
+//! absolute path of the source) is removed from the end of the text.
+//!
 //! A part or slice that does not exist is empty text. The one failure is size: no step may
 //! produce more than [`MIN_LIMIT`] bytes or the length of the text before the steps,
 //! whichever is larger, so a chain of `replace` or case steps cannot multiply a field. The
@@ -17,6 +20,8 @@ use std::borrow::Cow;
 use serde_json::Value;
 
 use crate::json::{Obj, Problems};
+use crate::model::{Model, Schema};
+use crate::path::Path;
 
 /// Most steps after one `from`.
 const MAX_STEPS: usize = 16;
@@ -36,7 +41,7 @@ pub(crate) const MIN_LIMIT: usize = 65_535;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct TooLong;
 
-const STEP_NAMES: &str = "trim, strip_leading, split, slice, replace, upper, lower";
+const STEP_NAMES: &str = "trim, strip_leading, strip_suffix, split, slice, replace, upper, lower";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Step {
@@ -47,6 +52,7 @@ pub(crate) enum Step {
     Replace { find: String, with: String },
     Upper,
     Lower,
+    StripSuffix(Path),
 }
 
 /// The steps after one `from`; empty when none were given.
@@ -54,15 +60,19 @@ pub(crate) enum Step {
 pub(crate) struct Steps(Vec<Step>);
 
 impl Steps {
-    /// Runs every step on `text`.
+    /// Runs every step on `text`; `strip_suffix` reads its field from `source`.
     ///
     /// # Errors
     /// [`TooLong`] when a step's result would exceed `max(MIN_LIMIT, text.len())` bytes.
-    pub(crate) fn apply<'t>(&self, text: Cow<'t, str>) -> Result<Cow<'t, str>, TooLong> {
+    pub(crate) fn apply<'t>(
+        &self,
+        text: Cow<'t, str>,
+        source: &dyn Model,
+    ) -> Result<Cow<'t, str>, TooLong> {
         let limit = text.len().max(MIN_LIMIT);
         self.0
             .iter()
-            .try_fold(text, |text, step| step.apply(text, limit))
+            .try_fold(text, |text, step| step.apply(text, limit, source))
     }
 }
 
@@ -79,7 +89,12 @@ fn fits(len: Option<usize>, limit: usize) -> Result<(), TooLong> {
 }
 
 impl Step {
-    fn apply<'t>(&self, text: Cow<'t, str>, limit: usize) -> Result<Cow<'t, str>, TooLong> {
+    fn apply<'t>(
+        &self,
+        text: Cow<'t, str>,
+        limit: usize,
+        source: &dyn Model,
+    ) -> Result<Cow<'t, str>, TooLong> {
         let owned = |s: &str| Cow::Owned(s.to_owned());
         Ok(match self {
             Self::Trim => match text {
@@ -132,12 +147,37 @@ impl Step {
                 fits(case_len(&text, char::to_lowercase), limit)?;
                 Cow::Owned(text.to_lowercase())
             }
+            Self::StripSuffix(path) => {
+                let suffix = source.get(path).unwrap_or_default();
+                owned(strip_suffix(&text, suffix.trim()))
+            }
         })
     }
 }
 
-/// Compiles the optional `steps` field of `object`.
-pub(crate) fn compile_steps(object: &Obj<'_>, problems: &mut Problems) -> Option<Steps> {
+/// `text` trimmed without `suffix` at its end (compared without case, after a space), then
+/// trimmed; empty when `suffix` is empty or `text` does not end with it as a word.
+fn strip_suffix<'t>(text: &'t str, suffix: &str) -> &'t str {
+    let text = text.trim();
+    let count = suffix.chars().count();
+    let Some((split, _)) = text.char_indices().rev().nth(count.wrapping_sub(1)) else {
+        return "";
+    };
+    let (head, tail) = text.split_at(split);
+    let word = head.is_empty() || head.ends_with(char::is_whitespace);
+    if count == 0 || !word || tail.to_lowercase() != suffix.to_lowercase() {
+        return "";
+    }
+    head.trim()
+}
+
+/// Compiles the optional `steps` field of `object`; `strip_suffix` paths are checked against
+/// the `source` schema.
+pub(crate) fn compile_steps(
+    object: &Obj<'_>,
+    source: &Schema,
+    problems: &mut Problems,
+) -> Option<Steps> {
     let Some(value) = object.value("steps") else {
         return Some(Steps::default());
     };
@@ -153,7 +193,7 @@ pub(crate) fn compile_steps(object: &Obj<'_>, problems: &mut Problems) -> Option
     let steps: Vec<Option<Step>> = list
         .iter()
         .enumerate()
-        .map(|(i, step)| compile_step(step, &format!("{at}[{i}]"), problems))
+        .map(|(i, step)| compile_step(step, &format!("{at}[{i}]"), source, problems))
         .collect();
     steps.into_iter().collect::<Option<_>>().map(Steps)
 }
@@ -165,11 +205,12 @@ fn step_fields(name: &str) -> Option<&'static [&'static str]> {
         "split" => &["step", "separator", "take"],
         "slice" => &["step", "start", "length"],
         "replace" => &["step", "find", "with"],
+        "strip_suffix" => &["step", "from"],
         _ => return None,
     })
 }
 
-fn compile_step(value: &Value, at: &str, problems: &mut Problems) -> Option<Step> {
+fn compile_step(value: &Value, at: &str, source: &Schema, problems: &mut Problems) -> Option<Step> {
     let Some(name) = value.get("step").and_then(Value::as_str) else {
         problems.add(format!("{at}.step"), "is required and must be a string");
         return None;
@@ -200,6 +241,16 @@ fn compile_step(value: &Value, at: &str, problems: &mut Problems) -> Option<Step
         "upper" => Some(Step::Upper),
         "lower" => Some(Step::Lower),
         "strip_leading" => text("chars", 1, MAX_SEPARATOR, problems).map(Step::StripLeading),
+        "strip_suffix" => {
+            let from = object.required_string("from", problems)?;
+            match source.document_path(from, false, false) {
+                Ok(path) => Some(Step::StripSuffix(path)),
+                Err(message) => {
+                    problems.add(object.at("from"), message);
+                    None
+                }
+            }
+        }
         "split" => {
             let separator = text("separator", 1, MAX_SEPARATOR, problems);
             let take = integer(&object, "take", -MAX_TAKE, MAX_TAKE, problems);
@@ -277,21 +328,57 @@ mod tests {
     use serde_json::json;
 
     use super::*;
+    use crate::PdfModel;
 
     fn steps(value: &Value) -> Result<Steps, Vec<String>> {
         let wrapper = json!({ "steps": value });
         let mut problems = Problems::default();
         let object = Obj::new(&wrapper, "r", &["steps"], &mut problems).expect("object");
-        let steps = compile_steps(&object, &mut problems);
+        let steps = compile_steps(&object, &Schema::pdf(["last_name"]), &mut problems);
         problems
             .finish(steps)
             .map_err(|found| found.into_iter().map(|p| p.to_string()).collect())
     }
 
+    fn source() -> PdfModel {
+        PdfModel::new(
+            [("last_name".to_owned(), " doe ".to_owned())],
+            1,
+            Vec::new(),
+        )
+    }
+
+    #[test]
+    fn strip_suffix_removes_another_field_from_the_end() {
+        let strip = json!([{ "step": "strip_suffix", "from": "field.last_name" }]);
+        assert_eq!(run(strip.clone(), "TEST BABY DOE"), "TEST BABY");
+        assert_eq!(run(strip.clone(), " Anna Maria  Doe "), "Anna Maria");
+        assert_eq!(run(strip.clone(), "DOE"), "");
+        assert_eq!(
+            run(strip.clone(), "TEST BABY MCDOE"),
+            "",
+            "a word boundary is required"
+        );
+        assert_eq!(
+            run(strip.clone(), "TEST BABY SMITH"),
+            "",
+            "no suffix, no value"
+        );
+        assert_eq!(run(strip, "é"), "");
+        let errors =
+            steps(&json!([{ "step": "strip_suffix", "from": "field.first" }])).unwrap_err();
+        assert!(
+            errors[0].contains("unknown template field `first`"),
+            "{errors:?}"
+        );
+        let errors = steps(&json!([{ "step": "strip_suffix", "from": "$.x" }])).unwrap_err();
+        assert!(errors[0].contains("r.steps[0].from"), "{errors:?}");
+    }
+
     fn run(value: Value, text: &str) -> String {
         steps(&value)
             .expect("valid steps")
-            .apply(Cow::Borrowed(text))
+            .apply(Cow::Borrowed(text), &source())
             .expect("within the size bound")
             .into_owned()
     }
@@ -374,7 +461,9 @@ mod tests {
 
     fn sized(value: &Value, text: &str) -> Result<usize, TooLong> {
         let steps = steps(value).expect("valid steps");
-        steps.apply(Cow::Borrowed(text)).map(|out| out.len())
+        steps
+            .apply(Cow::Borrowed(text), &source())
+            .map(|out| out.len())
     }
 
     #[test]
@@ -446,7 +535,7 @@ mod tests {
         assert_eq!(
             problems,
             [
-                "r.steps[0].step: unknown step; use trim, strip_leading, split, slice, replace, upper, lower",
+                "r.steps[0].step: unknown step; use trim, strip_leading, strip_suffix, split, slice, replace, upper, lower",
                 "r.steps[1].separator: must have 1 to 16 characters",
                 "r.steps[1].take: must be an integer from -100 to 100",
                 "r.steps[2].start: must be an integer from 0 to 65535",

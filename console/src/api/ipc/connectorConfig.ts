@@ -1,8 +1,9 @@
 /**
  * Protocol settings of connectors (docs/spec/configuration.md section 7), both ways. The
  * console models the HL7 acknowledgement mode, the ASTM link role, the AU instrument sheet and,
- * for delimited files, the whole settings object as JSON text (`templateJson`). Everything else
- * a protocol has (timeouts, identities, charsets) stays as it was.
+ * for delimited files, PDF reports and HL7 files, the whole settings object as JSON text
+ * (`templateJson`). Everything else a protocol has (timeouts, identities, charsets) stays as it
+ * was.
  */
 
 import type { AstmSettings, Hl7Settings } from "@/ipc/generated";
@@ -102,6 +103,8 @@ export function settingsFromWire(
       return au === undefined ? {} : { au };
     }
     case "delimited_file":
+    case "pdf_report":
+    case "hl7_file":
       return { templateJson: JSON.stringify(settings ?? {}, null, 2) };
     case "raw":
       return {};
@@ -117,7 +120,7 @@ function templateFrom(
   const text = ui.templateJson ?? "";
   let message = "";
   let parsed: unknown = null;
-  if (text.trim() === "") message = "A column template is required.";
+  if (text.trim() === "") message = "A template is required.";
   else {
     try {
       parsed = JSON.parse(text);
@@ -158,6 +161,8 @@ function newSettings(
       if (ui.au !== undefined) auToWire(settings, ui.au, undefined);
       break;
     case "delimited_file":
+    case "pdf_report":
+    case "hl7_file":
       return templateFrom(ui, path, issues) ?? {};
     case "raw":
       break;
@@ -197,6 +202,8 @@ export function settingsToWire(
       if (settings.au !== undefined) auToWire(next, settings.au, base.au);
       break;
     case "delimited_file":
+    case "pdf_report":
+    case "hl7_file":
       if (settings.templateJson !== base.templateJson) {
         return templateFrom(settings, path, issues) ?? next;
       }

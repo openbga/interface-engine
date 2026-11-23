@@ -188,7 +188,7 @@ test("H-07 message channel: source protocols by endpoint kind, duplicate detecti
   await pickRecord(page, "Endpoint", "ep-au680", source);
   expect(await offered("listener")).toEqual(["ASTM", "AU", "HL7 v2"]);
   await pickRecord(page, "Endpoint", "ep-qc-in", source);
-  expect(await offered("folder")).toEqual(["Delimited files"]);
+  expect(await offered("folder")).toEqual(["Delimited files", "PDF reports"]);
   await pickRecord(page, "Endpoint", "ep-lis-orders", source);
 
   // HL7: a source acknowledges; "None" is for destinations only.

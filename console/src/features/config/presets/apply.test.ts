@@ -209,3 +209,21 @@ describe("sample id path of the ASTM source", () => {
     }
   });
 });
+
+describe("a preset for a report template", () => {
+  it("writes its keys into the JSON template and keeps the template's other keys", () => {
+    const settings = {
+      ...emptySettings(),
+      templateJson: JSON.stringify({ max_pages: 3, fields: [{ name: "x", label: "X:" }] }),
+    };
+    const plan = planProfile(profile("pdf_newborn_screening_report"), settings);
+    const [change] = plan.changes;
+    expect(plan.unknown).toEqual([]);
+    expect(change?.field).toBe("templateJson");
+    expect(change?.changes).toBe(true);
+    expect(change?.shown?.now).toBe("label_area_end: not set; fields: 1 entry");
+    const written = JSON.parse(String(change?.becomes)) as Record<string, unknown>;
+    expect(written.max_pages).toBe(3);
+    expect((written.fields as unknown[]).length).toBeGreaterThan(30);
+  });
+});

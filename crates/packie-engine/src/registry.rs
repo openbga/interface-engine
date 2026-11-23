@@ -8,10 +8,12 @@ use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
 use packie_config::{
-    ApplyReport, Bootstrap, ChannelConfig, ConfigDiff, EndpointConfig, RuntimeConfig, TapFramer,
+    ApplyReport, Bootstrap, ChannelConfig, ConfigDiff, EndpointConfig, MessageChannel,
+    RuntimeConfig, TapFramer,
 };
 use packie_core::{
-    ChannelId, ChannelState, EndpointId, EndpointState, SessionState, StopReason, Timestamp,
+    ChannelId, ChannelState, ConnectorId, EndpointId, EndpointState, SessionState, StopReason,
+    Timestamp,
 };
 use packie_diagnostics::{
     BridgeDetail, ChannelSnapshot, DeliveryQueueSnapshot, DestinationCounters, DestinationSnapshot,
@@ -140,6 +142,20 @@ pub trait ChannelRegistry: Send + Sync + 'static {
     /// empty for the engine to fill in.
     fn serial_ports(&self) -> BoxFuture<'_, Result<Vec<SerialPort>, RegistryError>> {
         not_implemented("Serial port lists")
+    }
+
+    /// What `destination` of a message channel definition would be given for `original`:
+    /// the source parsed with the definition, the destination's mapping applied and the
+    /// result encoded for its protocol, storing and sending nothing (`test_pdf_report`).
+    /// The inner `Err` is the parse or transform error.
+    fn preview_output<'a>(
+        &'a self,
+        channel: &'a MessageChannel,
+        destination: ConnectorId,
+        original: &'a [u8],
+    ) -> BoxFuture<'a, Result<Result<Vec<u8>, String>, RegistryError>> {
+        let _ = (channel, destination, original);
+        not_implemented("Mapping previews")
     }
 
     /// Probes `endpoint` without sending data or changing anything, within `timeout`

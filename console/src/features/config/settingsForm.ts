@@ -110,6 +110,8 @@ export function valuesToSettings(
       return au ? { au } : {};
     }
     case "delimited_file":
+    case "pdf_report":
+    case "hl7_file":
       return { templateJson: values.templateJson };
     default:
       return {};

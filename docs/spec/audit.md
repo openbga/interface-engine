@@ -69,6 +69,7 @@ single events. Backup events depend on how the backup runs, as listed below.
 | `message_export` | The first chunk of a message export | — | `filter`, `format`, `include_bodies`; total matching message `count` on success |
 | `transmission_verify` | A transmission verification report is produced | `channel` | `since`, `until`; `messages` on the outcome |
 | `endpoint_test` | An endpoint definition is probed | — | `kind`, `target` (host and port, bind address, port name or folder path from the settings; never secrets); `ok` on success |
+| `pdf_report_test` | A PDF report is read with a template (`test_pdf_report`) | `message` when a stored message is used | `source` (`file`, `message`), `destination` (its protocol, or null without one); `ok` on success |
 | `notification_test` | A test message is sent to the notification targets | — | `results` (`target`, `ok` per target) on success |
 | `traffic_view` | A live traffic transcript is opened (`subscribe`, topic `traffic`); refused while the audit log cannot record it | `channel` | — |
 | `client_export` | A client writes an export it built itself (`record_client_export`), before writing it; the console's change report | — | `kind` (`change_report`), `rows` |

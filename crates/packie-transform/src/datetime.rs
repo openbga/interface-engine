@@ -1,10 +1,11 @@
 //! Date and time reformatting for the `datetime` rule (configuration.md §8.2).
 //!
-//! Formats use the delimited-file column tokens: `yyyy`, `yy`, `MM`, `dd`, `HH`, `mm`,
-//! `ss`, every token fixed-width and zero-padded, and literal separators. Any other
-//! punctuation or space is a literal; a letter that is not a token must be quoted
-//! (`'T'`, with `''` for a quote) so a typo such as `YYYY` is an error rather than a
-//! silent literal. `yy` means 1970 to 2069.
+//! Formats use the tokens `yyyy`, `yy`, `MM`, `dd`, `HH`, `mm`, `ss`, which are fixed-width
+//! and zero-padded, and `M`, `d`, `H`, which read one or two digits and are written without
+//! padding; an unpadded token is followed by a literal that does not start with a digit, or
+//! ends the format, so reading it is never ambiguous. Any other punctuation or space is a
+//! literal; a letter that is not a token must be quoted (`'T'`, with `''` for a quote) so a
+//! typo such as `YYYY` is an error rather than a silent literal. `yy` means 1970 to 2069.
 //!
 //! The input is parsed completely: a text that does not match the format, or names a
 //! date that does not exist, is an error. The output needs every component its format
@@ -17,16 +18,40 @@ use jiff::tz::TimeZone;
 
 use crate::error::Reason;
 
+/// A format token. `Month`, `Day` and `Hour` are zero-padded to two digits when `true`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Token {
     Year4,
     Year2,
-    Month,
-    Day,
-    Hour,
+    Month(bool),
+    Day(bool),
+    Hour(bool),
     Minute,
     Second,
     Literal(String),
+}
+
+impl Token {
+    /// The component letter (`y`, `M`, `d`, `H`, `m`, `s`); `None` for a literal.
+    const fn family(&self) -> Option<char> {
+        Some(match self {
+            Self::Year4 | Self::Year2 => 'y',
+            Self::Month(_) => 'M',
+            Self::Day(_) => 'd',
+            Self::Hour(_) => 'H',
+            Self::Minute => 'm',
+            Self::Second => 's',
+            Self::Literal(_) => return None,
+        })
+    }
+
+    /// Unpadded tokens read one or two digits.
+    const fn unpadded(&self) -> bool {
+        matches!(
+            self,
+            Self::Month(false) | Self::Day(false) | Self::Hour(false)
+        )
+    }
 }
 
 /// A parsed date/time format.
@@ -64,7 +89,7 @@ impl DateFormat {
                 'y' | 'M' | 'd' | 'H' | 'm' | 's' => {
                     tokens.push(token(c, run).ok_or(FormatError {
                         position,
-                        reason: "unknown token; use yyyy, yy, MM, dd, HH, mm or ss",
+                        reason: "unknown token; use yyyy, yy, MM, M, dd, d, HH, H, mm or ss",
                     })?);
                     i += run;
                 }
@@ -86,16 +111,7 @@ impl DateFormat {
 
     fn checked(tokens: Vec<Token>, end: usize) -> Result<Self, FormatError> {
         let mut seen = Vec::new();
-        for token in &tokens {
-            let family = match token {
-                Token::Year4 | Token::Year2 => 'y',
-                Token::Month => 'M',
-                Token::Day => 'd',
-                Token::Hour => 'H',
-                Token::Minute => 'm',
-                Token::Second => 's',
-                Token::Literal(_) => continue,
-            };
+        for family in tokens.iter().filter_map(Token::family) {
             if seen.contains(&family) {
                 return Err(FormatError {
                     position: end,
@@ -110,7 +126,22 @@ impl DateFormat {
                 reason: "the format has no date or time tokens",
             });
         }
+        let ambiguous = tokens.windows(2).any(|pair| {
+            pair[0].unpadded()
+                && !matches!(&pair[1], Token::Literal(l) if !l.starts_with(|c: char| c.is_ascii_digit()))
+        });
+        if ambiguous {
+            return Err(FormatError {
+                position: end,
+                reason: "M, d and H must be followed by a literal that is not a digit, or end the format",
+            });
+        }
         Ok(Self { tokens })
+    }
+
+    /// Whether the format has the component of letter `c` (`y`, `M`, `d`, `H`, `m`, `s`).
+    pub(crate) fn has(&self, c: char) -> bool {
+        self.tokens.iter().any(|t| t.family() == Some(c))
     }
 
     /// Reads `text` completely.
@@ -124,7 +155,16 @@ impl DateFormat {
                     .ok_or(Reason::DatetimeInput)?;
                 continue;
             }
-            let width = if *token == Token::Year4 { 4 } else { 2 };
+            let width = match token {
+                Token::Year4 => 4,
+                t if t.unpadded() => rest
+                    .bytes()
+                    .take(2)
+                    .take_while(u8::is_ascii_digit)
+                    .count()
+                    .max(1),
+                _ => 2,
+            };
             let digits = rest.get(..width).ok_or(Reason::DatetimeInput)?;
             if !digits.bytes().all(|b| b.is_ascii_digit()) {
                 return Err(Reason::DatetimeInput);
@@ -149,9 +189,11 @@ impl DateFormat {
                     Token::Literal(literal) => return Ok(literal.clone()),
                     Token::Year4 => (need(parts.year, "year")?, 4),
                     Token::Year2 => (need(parts.year, "year")?.rem_euclid(100), 2),
-                    Token::Month => (need(parts.month, "month")?.into(), 2),
-                    Token::Day => (need(parts.day, "day")?.into(), 2),
-                    Token::Hour => (need(parts.hour, "hour")?.into(), 2),
+                    Token::Month(padded) => {
+                        (need(parts.month, "month")?.into(), pad_width(*padded))
+                    }
+                    Token::Day(padded) => (need(parts.day, "day")?.into(), pad_width(*padded)),
+                    Token::Hour(padded) => (need(parts.hour, "hour")?.into(), pad_width(*padded)),
                     Token::Minute => (need(parts.minute, "minute")?.into(), 2),
                     Token::Second => (need(parts.second, "second")?.into(), 2),
                 };
@@ -161,13 +203,18 @@ impl DateFormat {
     }
 }
 
+/// Rendered width of a month, day or hour: 2 when zero-padded, else as many digits as needed.
+const fn pad_width(padded: bool) -> usize {
+    if padded { 2 } else { 1 }
+}
+
 fn token(c: char, run: usize) -> Option<Token> {
     match (c, run) {
         ('y', 4) => Some(Token::Year4),
         ('y', 2) => Some(Token::Year2),
-        ('M', 2) => Some(Token::Month),
-        ('d', 2) => Some(Token::Day),
-        ('H', 2) => Some(Token::Hour),
+        ('M', 1 | 2) => Some(Token::Month(run == 2)),
+        ('d', 1 | 2) => Some(Token::Day(run == 2)),
+        ('H', 1 | 2) => Some(Token::Hour(run == 2)),
         ('m', 2) => Some(Token::Minute),
         ('s', 2) => Some(Token::Second),
         _ => None,
@@ -220,9 +267,9 @@ impl Parts {
                     1900 + number
                 });
             }
-            Token::Month => self.month = Some(small()?),
-            Token::Day => self.day = Some(small()?),
-            Token::Hour => self.hour = Some(small()?),
+            Token::Month(_) => self.month = Some(small()?),
+            Token::Day(_) => self.day = Some(small()?),
+            Token::Hour(_) => self.hour = Some(small()?),
             Token::Minute => self.minute = Some(small()?),
             Token::Second => self.second = Some(small()?),
             Token::Literal(_) => {}
@@ -329,6 +376,33 @@ mod tests {
     }
 
     #[test]
+    fn unpadded_tokens_read_one_or_two_digits() {
+        let r = rule("M/d/yyyy H:mm", "yyyyMMddHHmm", None, None);
+        assert_eq!(r.apply("1/2/2026 8:05").as_deref(), Ok("202601020805"));
+        assert_eq!(r.apply("11/12/2026 18:05").as_deref(), Ok("202611121805"));
+        assert_eq!(r.apply("011/2/2026 8:05"), Err(Reason::DatetimeInput));
+        assert_eq!(r.apply("/2/2026 8:05"), Err(Reason::DatetimeInput));
+        let r = rule("yyyyMMddHHmm", "M/d/yyyy H:mm", None, None);
+        assert_eq!(r.apply("202601020805").as_deref(), Ok("1/2/2026 8:05"));
+        assert_eq!(r.apply("202611121805").as_deref(), Ok("11/12/2026 18:05"));
+        let end = rule("yyyy-M", "yyyyMM", None, None);
+        assert_eq!(end.apply("2026-7").as_deref(), Ok("202607"));
+    }
+
+    #[test]
+    fn unpadded_tokens_need_a_separator() {
+        for format in ["Md", "M1d", "yyyyMd", "dMMyyyy"] {
+            let error = DateFormat::parse(format).expect_err(format);
+            assert!(error.reason.contains("followed by a literal"), "{format}");
+        }
+        assert!(
+            DateFormat::parse("M/MM").is_err(),
+            "M and MM are one component"
+        );
+        assert!(DateFormat::parse("d.M.yyyy").is_ok());
+    }
+
+    #[test]
     fn input_must_match_exactly() {
         let r = rule("yyyyMMdd", "yyyyMMdd", None, None);
         for bad in [
@@ -415,7 +489,7 @@ mod tests {
         let position = |text: &str| DateFormat::parse(text).expect_err("invalid").position;
         assert_eq!(position("yyyyMMddHHmmsss"), 12);
         assert_eq!(position("YYYY"), 0);
-        assert_eq!(position("yyyy-M"), 5);
+        assert_eq!(position("yyyy-MMM"), 5);
         assert_eq!(position("yyyyT"), 4);
         assert_eq!(position("yyyy'T"), 4);
         assert_eq!(position("yyyyyyyy"), 0);

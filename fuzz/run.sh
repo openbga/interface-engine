@@ -16,6 +16,7 @@ max_len() {
         astm_frames) echo 1024 ;;
         hl7_ack) echo 2048 ;;
         files_read | config_parse) echo 8192 ;;
+        pdf_read) echo 65536 ;;
         *) echo 4096 ;;
     esac
 }

@@ -24,6 +24,27 @@ top, then by impact. Types follow [Keep a Changelog](https://keepachangelog.com/
   `lettre` 0.11.24 or later. The console also takes `cookie` 0.18.3 (RUSTSEC-2026-0594), a
   dependency of its desktop framework.
 
+- **Added:** Read PDF reports and send them on as HL7 messages (2026-11-19)
+
+  A message channel can now read laboratory reports published as PDF files from a folder or SFTP
+  server. A template names the labels printed on the report; their values fill the outgoing HL7
+  message, and the report itself can travel inside it. Reports a filter leaves out and reports
+  that cannot be read can be moved to their own folders, set in the folder or SFTP endpoint editor
+  under **After a file is read**. **Test with a PDF** in the channel
+  editor shows what a template reads from a report and the message it would send, before you
+  apply anything. A stored report shows as the text read from it, and its fields as the
+  template reads them. A newborn screening template and mapping are included as presets.
+
+  Technical notes:
+
+  New source protocol `pdf_report` (text layer only, no OCR) with the template settings of
+  configuration §7.7 (a `below` field's `phrase` −1 is the last phrase of its line); mappings read `field.<name>`, `report.pages` and `report.file_base64`.
+  Folder and SFTP endpoints gain `filtered_directory` and `invalid_directory`. New text step
+  `strip_suffix`; date formats accept the unpadded tokens `M`, `d` and `H`. Invalid PDF reports
+  record a `reason_detail`; the message store migrates to schema version 11 when it opens. The
+  test tool is the `test_pdf_report` management request and `packie pdf test`, audited as
+  `pdf_report_test`. New dependency: `lopdf` (MIT).
+
 - **Changed:** The product is now called OpenBGA Interface Engine (2026-11-17, [#3](https://github.com/openbga/interface-engine/pull/3))
 
   The engine and console carry the new name. Alert e-mail subjects, export files and installers use it
@@ -151,6 +172,29 @@ top, then by impact. Types follow [Keep a Changelog](https://keepachangelog.com/
   outputs can contain PHI.
 
 ### Medium impact
+
+- **Fixed:** Files are received when the engine takes them (2026-11-20)
+
+  A message read from a file (a delimited file or a PDF report) was recorded as received at the
+  file's last-modified time. An older file dropped into a folder today appeared days back on the
+  Messages page, and retention could remove it almost at once. Such messages are now received at
+  the moment the engine takes the file. Files are still read oldest first.
+
+- **Added:** Write HL7 messages as files to a folder or SFTP server (2026-11-19)
+
+  A message channel can now deliver HL7 messages as files: each message becomes one file in a
+  folder or on an SFTP server, for receivers that collect HL7 files instead of accepting a
+  network connection. You choose the file name pattern and the header fields the messages
+  carry. Messages received over HL7 can be written unchanged; others are built by a mapping,
+  such as the newborn screening preset for PDF reports.
+
+  Technical notes:
+
+  New destination protocol `hl7_file` on `folder` and `sftp` endpoints (configuration §7.8):
+  `file_name`, `on_exists` (`suffix`, `overwrite`, `fail`), the HL7 header fields and
+  `max_message_bytes`. The highest acknowledgement level is `handed_off`. A destination without a
+  mapping may use `hl7_file` for an `hl7_mllp` source. The newborn screening mapping preset now
+  targets `hl7_file`.
 
 - **Fixed:** Messages show the configuration version in effect after an in-place change (2026-11-17, [#5](https://github.com/openbga/interface-engine/pull/5))
 

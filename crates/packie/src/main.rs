@@ -22,13 +22,14 @@ mod logs;
 mod message_view;
 mod messages;
 mod output;
+mod pdf;
 mod reports;
 mod secrets;
 mod service;
 mod status;
 mod stop;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use clap::{Args, Parser, Subcommand};
@@ -104,6 +105,9 @@ enum Command {
     /// Test the alert notification targets.
     #[command(subcommand)]
     Notify(checks::NotifyCommand),
+    /// Test PDF report templates.
+    #[command(subcommand)]
+    Pdf(pdf::PdfCommand),
 }
 
 #[derive(Debug, Subcommand)]
@@ -266,17 +270,20 @@ async fn dispatch(cli: Cli) -> Result<(), Failure> {
         Command::Backup(command) => backup::run(&target, command).await,
         Command::Endpoints(command) => checks::endpoints(&target, command).await,
         Command::Notify(command) => checks::notify(&target, command).await,
-        Command::Service(args) => {
-            let action = match args.command {
-                ServiceCommand::Install => service::Action::Install,
-                ServiceCommand::Uninstall => service::Action::Uninstall,
-                ServiceCommand::Start => service::Action::Start,
-                ServiceCommand::Stop => service::Action::Stop,
-                ServiceCommand::Status => service::Action::Status,
-            };
-            service::service(action, &cli.bootstrap, args.user)
-        }
+        Command::Pdf(command) => pdf::pdf(&target, command).await,
+        Command::Service(args) => service_command(&args, &cli.bootstrap),
     }
+}
+
+fn service_command(args: &ServiceArgs, bootstrap: &Path) -> Result<(), Failure> {
+    let action = match args.command {
+        ServiceCommand::Install => service::Action::Install,
+        ServiceCommand::Uninstall => service::Action::Uninstall,
+        ServiceCommand::Start => service::Action::Start,
+        ServiceCommand::Stop => service::Action::Stop,
+        ServiceCommand::Status => service::Action::Status,
+    };
+    service::service(action, bootstrap, args.user)
 }
 
 /// launchd relaunches a job after any non-zero exit (`KeepAlive` has no per-code

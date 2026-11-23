@@ -266,7 +266,7 @@ impl EngineHandler {
                 message: Box::new(registry.message(message_id).await.map_err(registry_error)?),
             }),
             Request::ExportMessages(export) => Ok(Response::MessageExport(
-                crate::reports::export(registry.as_ref(), &export)
+                crate::reports::export(registry.as_ref(), &self.shared.active(), &export)
                     .await
                     .map_err(registry_error)?,
             )),
@@ -274,11 +274,11 @@ impl EngineHandler {
             Request::GetMessageFields { message_id } => {
                 let record = registry.message(message_id).await.map_err(registry_error)?;
                 Ok(Response::MessageFields(Box::new(
-                    crate::fields::of(registry.as_ref(), &record).await,
+                    crate::fields::of(registry.as_ref(), &self.shared.active(), &record).await,
                 )))
             }
             Request::GetMessageBody(body) => Ok(Response::MessageBody(
-                registry.message_body(body).await.map_err(registry_error)?,
+                crate::pdf_view::body(registry.as_ref(), &self.shared.active(), body).await?,
             )),
             Request::Resend(resend) => {
                 if !resend.has_valid_reason() {
@@ -400,6 +400,7 @@ fn command_name(request: &Request) -> Option<&'static str> {
         Request::DeleteSecret { .. } => "delete_secret",
         Request::TestEndpoint(_) => "test_endpoint",
         Request::TestNotification => "test_notification",
+        Request::TestPdfReport(_) => "test_pdf_report",
         _ => return None,
     })
 }
@@ -623,6 +624,9 @@ impl EngineHandler {
                 Ok(Response::EndpointTested(report)) => {
                     map.insert("ok".into(), serde_json::json!(report.ok));
                 }
+                Ok(Response::PdfReportTested(result)) => {
+                    map.insert("ok".into(), serde_json::json!(result.ok));
+                }
                 Ok(Response::NotificationTested { results }) => {
                     let results: Vec<_> = results
                         .iter()
@@ -746,6 +750,7 @@ impl EngineHandler {
             Request::ListSerialPorts => checks::serial_ports(shared).await,
             Request::TestEndpoint(test) => checks::test_endpoint(shared, test).await,
             Request::TestNotification => Ok(checks::test_notification(shared).await),
+            Request::TestPdfReport(test) => crate::pdf_test::test_pdf_report(shared, test).await,
             // The audit record written before this answer is the whole of the request.
             Request::RecordClientExport { .. } => Ok(Response::Done),
             Request::TestHook { hook } => self.test_hook(hook),
