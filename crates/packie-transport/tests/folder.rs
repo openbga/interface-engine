@@ -387,16 +387,26 @@ async fn files_move_into_outcome_directories_that_recursive_listing_skips() {
         .unwrap()
         .unwrap();
     assert_eq!(unit.name, "in/report.pdf");
-    source.consumed_into(&unit, "skipped").await.unwrap();
-    assert!(dir.path().join("skipped/in/report.pdf").exists());
+    source
+        .consumed_into(&unit, "skipped/2026/11/24")
+        .await
+        .unwrap();
+    assert!(dir.path().join("skipped/2026/11/24/in/report.pdf").exists());
 
     std::fs::write(dir.path().join("in/other.pdf"), "y").unwrap();
     let unit = tokio::time::timeout(Duration::from_secs(10), source.next())
         .await
         .unwrap()
         .unwrap();
-    source.consumed_into(&unit, "errors/pdf").await.unwrap();
-    assert!(dir.path().join("errors/pdf/in/other.pdf").exists());
+    source
+        .consumed_into(&unit, "errors/pdf/2026/11/24")
+        .await
+        .unwrap();
+    assert!(
+        dir.path()
+            .join("errors/pdf/2026/11/24/in/other.pdf")
+            .exists()
+    );
     // Moved files are never listed again, though the source descends into sub-directories.
     let again = tokio::time::timeout(Duration::from_millis(2500), source.next()).await;
     assert!(again.is_err(), "a moved file came back");

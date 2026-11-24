@@ -16,7 +16,7 @@
     {
       "title": "Folders and embedding",
       "paragraphs": [
-        "On the folder or SFTP endpoint, under After a file is read, a filtered and an unreadable reports folder keep left-out and unreadable reports apart. A mapping embeds the report with report.file_base64; an HL7 v2 files destination writes each message as a file for the receiver to collect."
+        "On the folder or SFTP endpoint, under After a file is read, a filtered and an unreadable reports folder keep left-out and unreadable reports apart; moved PDF reports are filed under YYYY/MM/DD date folders inside them. A mapping embeds the report with report.file_base64; an HL7 v2 files destination writes each message as a file for the receiver to collect."
       ]
     }
   ]

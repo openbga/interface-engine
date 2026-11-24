@@ -93,6 +93,20 @@ fn state_of(store: &Store, sample: &str) -> Option<MessageState> {
         .map(|r| r.summary.state)
 }
 
+fn local_date_path(at: Timestamp) -> String {
+    at.as_jiff()
+        .to_zoned(jiff::tz::TimeZone::system())
+        .strftime("%Y/%m/%d")
+        .to_string()
+}
+
+fn date_for(store: &Store, file_name: &str) -> Option<String> {
+    records(store)
+        .into_iter()
+        .find(|r| r.source_file.as_ref().is_some_and(|f| f.name == file_name))
+        .map(|r| local_date_path(r.summary.received_at))
+}
+
 #[tokio::test]
 async fn reports_move_into_the_directory_of_their_outcome() {
     let rig = rig().await;
@@ -120,12 +134,14 @@ async fn reports_move_into_the_directory_of_their_outcome() {
         ("other.pdf", "skipped"),
         ("broken.pdf", "errors"),
     ] {
-        let moved = rig.inbox.join(directory).join(name);
-        until(&format!("{name} in {directory}"), || {
+        let day = until(&format!("{name} is stored"), || date_for(&rig.store, name)).await;
+        let moved = rig.inbox.join(directory).join(&day).join(name);
+        until(&format!("{name} in {directory}/{day}"), || {
             moved.exists().then_some(())
         })
         .await;
         assert!(!rig.inbox.join(name).exists());
+        assert!(!rig.inbox.join(directory).join(name).exists());
     }
     assert!(!rig.outbox.join("ORU_SYN-0002.hl7").exists());
     assert_eq!(state_of(&rig.store, "SYN-0001"), Some(MessageState::Routed));
@@ -134,8 +150,8 @@ async fn reports_move_into_the_directory_of_their_outcome() {
         Some(MessageState::Filtered)
     );
 
-    let records = records(&rig.store);
-    let broken = records
+    let records_now = records(&rig.store);
+    let broken = records_now
         .iter()
         .find(|r| r.summary.state == MessageState::Invalid)
         .expect("the unreadable file is a message");
@@ -144,20 +160,31 @@ async fn reports_move_into_the_directory_of_their_outcome() {
         broken.reason_detail.as_deref(),
         Some("the file is not a readable PDF")
     );
-    for record in &records {
+    for record in &records_now {
         assert_eq!(record.summary.protocol, ProtocolKind::PdfReport);
         assert_eq!(record.summary.message_type.as_deref(), Some("pdf_report"));
     }
 
-    // The same filtered report again: a duplicate, moved where its original went.
+    // The same filtered report again: a duplicate, moved where its original went under today's date.
     std::fs::write(rig.inbox.join("other.pdf"), report("SYN-0002", "F9999")).unwrap();
-    let again = rig.inbox.join("skipped").join("other-1.pdf");
+    until("the duplicate is stored", || {
+        (records_in(&rig.store, MessageState::Duplicate) == 1).then_some(())
+    })
+    .await;
+    let duplicate_day = records(&rig.store)
+        .into_iter()
+        .find(|r| r.summary.state == MessageState::Duplicate)
+        .map(|r| local_date_path(r.summary.received_at))
+        .unwrap();
+    let again = rig
+        .inbox
+        .join("skipped")
+        .join(&duplicate_day)
+        .join("other-1.pdf");
     until("the repeated report is skipped too", || {
         again.exists().then_some(())
     })
     .await;
-    let duplicates = records_in(&rig.store, MessageState::Duplicate);
-    assert_eq!(duplicates, 1);
 }
 
 #[tokio::test]
@@ -167,7 +194,11 @@ async fn a_report_without_its_required_label_is_invalid_with_a_detail() {
     let at = bytes.windows(11).position(|w| w == b"Lab Number:").unwrap();
     bytes[at..at + 11].copy_from_slice(b"Lab Numbr: ");
     std::fs::write(rig.inbox.join("mismatch.pdf"), bytes).unwrap();
-    let moved = rig.inbox.join("errors").join("mismatch.pdf");
+    let day = until("mismatch.pdf is stored", || {
+        date_for(&rig.store, "mismatch.pdf")
+    })
+    .await;
+    let moved = rig.inbox.join("errors").join(&day).join("mismatch.pdf");
     until("the report is in errors", || moved.exists().then_some(())).await;
     let record = records(&rig.store).pop().unwrap();
     assert_eq!(record.summary.state, MessageState::Invalid);
@@ -210,4 +241,52 @@ async fn an_old_report_dropped_now_is_received_now() {
         received >= before,
         "received {received}, dropped after {before}"
     );
+    let moved = rig
+        .inbox
+        .join("processed")
+        .join(local_date_path(received))
+        .join("old.pdf");
+    until("the old report is moved under today's date", || {
+        moved.exists().then_some(())
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn reports_without_outcome_directories_also_move_into_dated_processed_folders() {
+    let dir = tempfile::tempdir().unwrap();
+    let inbox = dir.path().join("in");
+    let outbox = dir.path().join("out");
+    std::fs::create_dir_all(&inbox).unwrap();
+    std::fs::create_dir_all(&outbox).unwrap();
+    let store = open_store(dir.path(), None);
+    let mut h = Harness::with_options(options_with_store(system_transports(), &store));
+    let channel = json!({
+        "kind": "message", "channel_id": "reports", "label": "Reports",
+        "source": {"endpoint": "in-dir", "protocol": "pdf_report", "settings": {
+            "fields": [{"name": "sample_id", "label": "Lab Number:", "required": true}],
+        }},
+        "destinations": [{
+            "destination_id": "out", "label": "Out", "endpoint": "out-dir",
+            "protocol": "hl7_file",
+            "settings": {"file_name": "ORU_{sample_id}.hl7"},
+            "mapping": {"rules": [
+                {"op": "constant", "value": "ORU^R01^ORU_R01", "to": "MSH.9"},
+                {"op": "copy", "from": "field.sample_id", "to": "PID.3.1"},
+            ]},
+        }],
+    });
+    h.apply(document(
+        vec![folder("in-dir", &inbox), folder("out-dir", &outbox)],
+        vec![channel],
+    ))
+    .await;
+
+    std::fs::write(inbox.join("single.pdf"), report("SYN-0005", "F0001")).unwrap();
+    let day = until("single.pdf is stored", || date_for(&store, "single.pdf")).await;
+    let moved = inbox.join("processed").join(&day).join("single.pdf");
+    until("single.pdf in processed/YYYY/MM/DD", || {
+        moved.exists().then_some(())
+    })
+    .await;
 }

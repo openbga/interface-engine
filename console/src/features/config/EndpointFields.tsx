@@ -213,19 +213,19 @@ function AfterReading() {
               label="Processed folder"
               isRequired
               validate={subfolder}
-              description="Inside the endpoint's folder; created when needed."
+              description="Inside the endpoint's folder; created when needed (PDF reports use YYYY/MM/DD date folders inside it)."
             />
             <TextInput
               name="filteredDirectory"
               label="Filtered reports folder"
               validate={subfolder}
-              description="PDF report sources: reports the channel's filters leave out. Empty: the processed folder."
+              description="PDF report sources: reports the channel's filters leave out, under YYYY/MM/DD. Empty: the processed folder."
             />
             <TextInput
               name="invalidDirectory"
               label="Unreadable reports folder"
               validate={subfolder}
-              description="PDF report sources: reports that cannot be read with the template. Empty: the processed folder."
+              description="PDF report sources: reports that cannot be read with the template, under YYYY/MM/DD. Empty: the processed folder."
             />
           </>
         )}
