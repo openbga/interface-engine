@@ -7,26 +7,8 @@ For installed systems, use the [operator guides](../operations/README.md).
 
 ## Repository layout
 
-All engine workspace crates live under `crates/`.
-
-| Crate | Owns |
-| --- | --- |
-| `packie-core` | IDs, timestamps, state and kind enums, error and byte helpers. |
-| `packie-config` | Bootstrap/runtime models, validation, versioning, persistence and secret references/providers. |
-| `packie-transport` | Serial, TCP, folder and SFTP adapters, stream/file contracts and serial port leases. |
-| `packie-astm` | ASTM framing, records and receive/send state machines. |
-| `packie-au` | AU framing, fixed-width models, codecs and session driver. |
-| `packie-hl7` | HL7 v2 model, paths, escaping, ACKs and MLLP framing. |
-| `packie-files` | Delimited-file templates, parsing and encoding. |
-| `packie-transform` | Protocol model adapters, paths, filters, mapping rules and code tables. |
-| `packie-store` | SQLite single-writer store, message bodies, deliveries and migrations. |
-| `packie-diagnostics` | Structured logging, snapshots, counters, alerts and traffic tap. |
-| `packie-ipc` | Local IPC DTOs, framing, server/client and TypeScript export. |
-| `packie-engine` | Engine composition, configuration apply, diagnostics and IPC lifecycle; channel registry contract. |
-| `packie-routing` | Registry implementation, channel supervisors, bridges, protocol connectors and message pipeline. |
-| `packie-host` | OS service control, Windows service entry point and single-instance lock. |
-| `packie` | Foreground/service host and operator CLI. |
-| `packie-sim` | Scripted peers, scenario validation/runner and performance benchmarks. |
+All engine workspace crates live under `crates/`; [architecture §7](../architecture.md#7-crates)
+lists each crate's purpose and dependencies.
 
 | Path | Owns |
 | --- | --- |
@@ -159,8 +141,8 @@ root. [Testing](../testing.md) defines the integration gate.
 | [Scenarios](../../.github/workflows/scenarios.yml): `scenarios` | Ubuntu builds both binaries, runs all cases with `--jobs 4 --deny-skips --verbose`, publishes JUnit and retains failed state/log artifacts. |
 | [Publish presentation](../../.github/workflows/pages.yml): `deploy` | Uploads `website/` and deploys it to GitHub Pages; runs for website changes on `main`. |
 
-CI and Scenarios run for pushes to `main` and pull requests; Scenarios also supports manual
-dispatch. Performance targets are measured with `packie-sim bench` before a release; see
+CI and Scenarios run for pull requests and pushes to `develop` and `main`; Scenarios also
+supports manual dispatch. Performance targets are measured with `packie-sim bench` before a release; see
 [acceptance](../spec/acceptance.md#10-performance-security-packaging).
 
 Every observable change carries an entry in `changelog.d/`

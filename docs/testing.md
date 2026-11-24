@@ -11,8 +11,8 @@ checked at integration points rather than after every edit.
 | Crate tests | Each crate's own behavior, including error paths | `crates/<crate>/src` and `crates/<crate>/tests` | The crate's author, scoped (`cargo test -p`) |
 | Protocol conformance | Codecs accept the corpus, reject malformed input with typed errors, never panic (property tests on framing and escaping) | `crates/packie-astm`, `packie-au`, `packie-hl7`, `packie-files` fixtures; `packie-pdf` synthetic reports built by its tests | The crate's author |
 | Scenarios | Channels behave as specified under connect, send, disconnect, reconnect, config apply, pause/resume, overflow, duplicate, crash-and-restart; driven by the simulator over real loopback TCP and virtual serial ports | `tests/scenarios/*.json` + `crates/packie-sim` runner | Routing/transport authors for their scenarios; the gate for all |
-| Console | Type-check and lint; component tests for grids and filters; smoke of each page against the simulator-backed engine | `console/` | Console author; the gate for the smoke journey |
-| Gate | `cargo fmt --check`, `cargo clippy --workspace -D warnings`, `cargo test --workspace`, console `tsc` + lint + tests, scenario suite | CI on every pull request and every push to `main`; a maintainer before a release |
+| Console | Type-check and lint; component tests for grids and filters; browser journeys through each page on the mock engine | `console/` | Console author; the gate for the journeys |
+| Gate | `cargo fmt --check`, `cargo clippy --workspace -D warnings`, `cargo test --workspace`, console `tsc` + lint + tests, scenario suite | CI on every pull request and every push to `develop` or `main`; a maintainer before a release |
 
 ## Rules
 

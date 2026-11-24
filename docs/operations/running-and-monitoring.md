@@ -15,9 +15,9 @@ deliveries needing attention, message-store state and free disk space.
 
 | Engine state | Meaning |
 | --- | --- |
-| Healthy | The engine has an active configuration and usable store, disk is above the critical limit, and enabled channels are running or starting. |
-| Degraded | A channel needs recovery, the store is unavailable, disk is critically low, or no valid configuration is active. Open the alerts and affected channel. |
-| Stopped | Shutdown has completed. |
+| Running (`healthy` in `packie status`) | The engine has an active configuration and usable store, disk is above the critical limit, and enabled channels are running or starting. |
+| Needs attention (`degraded`) | A channel needs recovery, the store is unavailable, disk is critically low, or no valid configuration is active. Open the alerts and affected channel. |
+| Stopping (`stopped`) | Shutdown has completed; this is the engine's final state before it exits. |
 
 Paused and disabled channels do not by themselves make the engine degraded. A healthy
 engine can still have deliveries needing an operator's decision.
@@ -53,12 +53,12 @@ minutes comes first, followed by the newest error, then the channel label A to Z
 | --- | --- |
 | 1 | Any channel with an open critical alert |
 | 2 | Retrying |
-| 3 | Degraded, or stopped because of an error or invalid configuration |
+| 3 | Degraded |
 | 4 | Running with a warning alert or deliveries needing attention |
 | 5 | Running with traffic in the last 60 seconds |
 | 6 | Running and idle |
 | 7 | Starting |
-| 8 | Other stopped channels, including paused and disabled |
+| 8 | Stopped, whatever the reason (paused, disabled, error or invalid configuration) |
 
 A critical alert adds red emphasis and a **Critical alert** label to the row. While
 the pointer is over the table or a row has keyboard focus, rows hold their positions;
@@ -80,7 +80,7 @@ blue means work in progress, amber means a warning, and red means a failure.
 | Degraded | Triangle | Amber | The channel is running with an impairment, such as buffer pressure or a destination that is down. |
 | Paused by operator | Pause bars | Neutral | Intentionally stopped; no retry is scheduled. |
 | Disabled | Dash | Neutral | Disabled in the active configuration. |
-| Stopped: configuration invalid / Stopped: error | Square | Red | Read the cause and correct it before restarting. |
+| Stopped: configuration invalid / Stopped: error | Square | Neutral | Read the cause and correct it before restarting. |
 | Other Stopped labels | Square | Neutral | The reason names a replacement, shutdown or other stop. |
 
 | Endpoint label | Shape | Color | Meaning |
@@ -208,7 +208,7 @@ message it was resent from. Filtering, sorting and paging happen in the engine.
 | Message state | Receiving, received, routed, filtered, duplicate, invalid, aborted or observed. |
 | Delivery state | Find messages with a delivery in the selected state. |
 | Identifier | Match a control, sample or patient ID exactly or by its beginning. |
-| Text | At least three characters; searches identifiers, message type and stored bodies within the time range. |
+| Text | At least three characters; searches identifiers and message type within the time range; bodies are not searched. |
 | Quick filters | Needs attention, Queued, Duplicates, Invalid or aborted, each with a count. These replace the state selections. |
 
 Identifier and text searches may contain patient data. They are kept out of the page
@@ -326,8 +326,9 @@ A missing sent hash does not prove nothing was sent; pass-through deliveries can
 An ACK proves only its recorded level, not clinical correctness at the final destination.
 
 Reports cap delivery rows at 10,000. Check the text summary's warning or JSON `truncated`
-before filing CSV evidence: CSV has no truncation marker. When truncated, the message count
-covers the whole selection, but destination totals cover only processed pages. Split the
+before filing CSV evidence; a truncated CSV ends with a `# truncated:` line. When truncated,
+the message count and destination totals still cover the whole period; only the delivery
+rows stop early. Split the
 period until reports are complete. `--csv` and `--json` conflict; `--output` implies CSV
 unless `--json` is present. The audit action is `transmission_verify`.
 
@@ -337,7 +338,7 @@ oldest first, without list pagination or sort flags. CSV is the default; JSON Li
 `--format jsonl`. Metadata includes identifiers and each delivery's destination/state/ACK
 level (CSV joins these as `destination:state:ack_level`, separated by semicolons).
 `--bodies` adds original content as UTF-8 text with invalid byte sequences replaced; an
-unreadable or incomplete original is exported as empty text. This is not a byte-exact body
+unreadable or incomplete original stops the export with an error. This is not a byte-exact body
 archive. The first export chunk is audited as `message_export` with filters, format, content
 choice and matching count; `--bodies` makes the content access explicit.
 
@@ -474,7 +475,7 @@ files remain in the configured log directory for retained history.
 | Starts, stops and operator actions | `node.started`, `node.stopped`, `channel.started`, `channel.stopped`, `channel.state_changed`, `operator.command` |
 | Connection failures and recovery | `endpoint.state_changed`, `endpoint.connected`, `endpoint.retry_scheduled`, `endpoint.retry_succeeded`, `endpoint.write_failed`, `listener.peer_rejected` |
 | Bridge sessions and pressure | `bridge.session_opened`, `bridge.session_closed`, `bridge.close_propagated`, `buffer.overflow_detected`, `buffer.overflow_cleared`, `tap.dropped` |
-| Receipt, input problems and duplicates | `message.committed`, `message.invalid`, `message.aborted`, `message.duplicate`, `message.identity_reused`, `message.filtered`, `file.consume_failed` |
+| Receipt, input problems and duplicates | `message.committed`, `message.invalid`, `message.aborted`, `message.duplicate`, `message.identity_reused`, `file.consume_failed` |
 | Delivery decisions | `delivery.attempt_started`, `delivery.state_changed`, `delivery.transform_failed`, `delivery.ack_unmatched`, `delivery.resend_requested` |
 | Store, configuration and alerts | `store.error`, `reconciliation.completed`, `retention.purged`, `config.applied`, `config.rejected`, `alert.raised`, `alert.cleared` |
 

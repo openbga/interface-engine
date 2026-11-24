@@ -84,7 +84,7 @@ Endpoint states are `disabled`, `connecting`, `listening`, `connected`, `retryin
 | `listening` | A listener socket is bound and accepting. |
 | `connected` | Ready for I/O (client connected, peer accepted, serial port open). |
 | `retrying` | The last attempt failed and a retry is scheduled. |
-| `disconnected` | Intentionally idle: the channel is stopped, or the endpoint has no running channel. |
+| `disconnected` | Intentionally idle: the channel is stopped, the endpoint has no running channel, or it is the sender-side listener under `receiver_then_sender`, unbound until the receiver attaches. |
 | `error` | A persistent attachment failure, such as permission denied, unsupported serial settings or a bind failure other than address in use. Retries continue at `max_delay_ms`. |
 
 Rules:
@@ -200,7 +200,7 @@ already held by a writer and the reader's pending segment are outside those gaug
 | Rule | Statement |
 | --- | --- |
 | Single peer | A listener accepts at most one active peer session per channel. |
-| Allowlist | A peer whose address does not match `allowed_peer_cidrs` is rejected at accept, before any byte is read, and `listener.peer_rejected` is logged (alert `peer_rejected`). A non-empty allowlist is enforced; an empty one accepts any peer. |
+| Allowlist | A peer whose address does not match `allowed_peer_cidrs` is rejected at accept, before any byte is read, and `listener.peer_rejected` is logged (alert `peer_rejected`). A non-empty allowlist is enforced; an empty one accepts any peer only on a loopback bind or with `allow_any_peer: true` (validation refuses a non-loopback listener that has neither). |
 | Additional peer | A peer that connects while a session is active is reset, logged as a warning and counted as `listener.peer_rejected`. The active session is never replaced by the newcomer. A peer arriving as the previous connection closes waits up to 250 ms for that session to release the listener before it is refused, so a sender that reconnects at once is accepted. A rebooted instrument whose old connection is half-open is accepted once keepalive or `idle_timeout_seconds` has dropped the old connection. |
 | No state change | Rejecting a peer does not change channel state unless a pairing timeout or other failure is already in progress. |
 | Stays bound | The listening socket stays bound across peer read/write failures, pairing timeouts, failure of the other side and retry backoff. An allowed peer arriving between sessions can be accepted and held by the transport until the next attachment attempt. An error returned by the acceptor drops it so the next attempt binds again. |

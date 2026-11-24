@@ -159,7 +159,7 @@ the lab's source-to-final-report comparisons:
 | Evidence task | Command and interpretation |
 | --- | --- |
 | Summarize receipt and delivery for a channel/time window | `packie messages verify --channel <channel-id> --since <start-time> --until <end-time>` counts accepted, received, handed-off, unresolved, closed and pending deliveries per destination. |
-| Preserve delivery-level evidence | Add `--csv --output <new-file>` for rows with original/transformed SHA-256, states, ACK level/code, `ack_control_id` (the ACK's own control id; HL7 ACK `MSH-10`), attempts and times. Check the summary or `--json` report for `truncated`; CSV has no truncation marker. Split periods exceeding 10,000 delivery rows. |
+| Preserve delivery-level evidence | Add `--csv --output <new-file>` for rows with original/transformed SHA-256, states, ACK level/code, `ack_control_id` (the ACK's own control id; HL7 ACK `MSH-10`), attempts and times. Check the summary or `--json` report for `truncated`; a truncated CSV ends with a `# truncated:` line. Split periods exceeding 10,000 delivery rows. |
 | Preserve selected messages | `packie messages export --channel <channel-id> --since <start-time> --until <end-time> --format jsonl --output <new-file>` exports matching metadata and delivery summaries, oldest first. Add `--bodies` only when original content is required. |
 | Compare original and transformed content locally | `packie messages show <message-id> --body original`, `--body <destination-id>` and `--fields` explicitly request content; `--json` without them shows metadata, including mapping versions and stored hashes. Displayed bodies can be truncated. |
 
@@ -167,8 +167,9 @@ Reports are audited as `transmission_verify`; message exports as `message_export
 filters, format, whether bodies were requested and matching count. Both record the OS
 account. Existing output files are refused. Even metadata and hashes can be PHI; restrict
 evidence access, encrypt storage/transfer, inventory recipients and retain/dispose copies
-under the lab's policy. Exported bodies are UTF-8 text with invalid sequences replaced and
-unreadable/incomplete originals exported as empty text, so they are not byte-exact archives.
+under the lab's policy. Exported bodies are UTF-8 text with invalid sequences replaced, so
+they are not byte-exact archives; an unreadable or incomplete original stops the export with an
+error.
 Use [verified backups](install.md#backup-and-restore) when preserving the complete stored data.
 
 A stored-byte hash does not prove clinical correctness, and a missing transformed hash does

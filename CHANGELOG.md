@@ -324,6 +324,21 @@ top, then by impact. Types follow [Keep a Changelog](https://keepachangelog.com/
 
 ### Low impact
 
+- **Fixed:** Help and operator guides corrected where they disagreed with the engine (2026-11-22, [#11](https://github.com/openbga/interface-engine/pull/11))
+
+  The Connection to the engine help article now gives the console's actual reconnection timing: a
+  first retry after about half a second, doubling to about 5 seconds. Statements in the operator
+  guides that the engine contradicts were corrected in the same way.
+
+  Technical notes:
+
+  Operator guide corrections: the macOS daemon's error log is
+  `/Library/Logs/Positive ACK/launchd.stderr.log`; the Messages text filter searches identifiers
+  and message type, never bodies; a truncated transmission CSV ends with a `# truncated:` line and
+  the report's totals cover the whole period; an export with `--bodies` stops with an error when an
+  original cannot be read; `max_frame_chars` accepts 64–64,000; an AU class A destination and an
+  HL7 destination with `ack_mode: none` reach `handed_off` at most. No behavior changed.
+
 - **Fixed:** Configuration fixes (2026-11-12)
 
   Signing off a verification no longer crashes, a configuration with extra text after it is rejected,

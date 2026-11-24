@@ -355,8 +355,8 @@ All protocol settings are validated when the document is validated.
 
 ### 7.2 `au`
 
-No defaults except `block_timeout_ms` (9900, the codec's): the laboratory supplies the
-settings of the instrument's online parameter sheet.
+No defaults except `block_timeout_ms` (9900, the codec's) and `format.test_code_digits` (2):
+the laboratory supplies the settings of the instrument's online parameter sheet.
 
 | Field | Type | Validation |
 | --- | --- | --- |
@@ -390,7 +390,7 @@ A receipt keeps the settings it was received with; later config changes never re
 | `charset` | string | `utf8` | `utf8`, `latin1`, `ascii`. Written to MSH-18 and used to decode. |
 | `max_message_bytes` | integer | `1048576` | 1024–67,108,864. |
 | `require_end_cr` | boolean | `true` | `false`: a frame ends at the end block (0x1C) and a carriage return right after it is accepted but not required, for senders that omit it. Frames the engine writes always end 0x1C 0x0D. |
-| `ack_message_types` | array of string | `["ACK"]` | Destination: 1–8 message codes (MSH-9.1, three capitals or digits) accepted as the acknowledgement of a sent message. An order message is answered by an order response (`ORL`, `ORR`), which carries the same MSA segment; list its code or the answer is ignored (`delivery.ack_unmatched`) and the delivery times out. Correlation by MSA-2 and the acknowledgement levels do not change; per-order status in ORC-1 (for example `OK` or `UA`) is not evaluated, so `acknowledged` reflects the MSA code only. |
+| `ack_message_types` | array of string | `["ACK"]` | Destination: 1–8 message codes (MSH-9.1, three capitals or digits, starting with a letter) accepted as the acknowledgement of a sent message. An order message is answered by an order response (`ORL`, `ORR`), which carries the same MSA segment; list its code or the answer is ignored (`delivery.ack_unmatched`) and the delivery times out. Correlation by MSA-2 and the acknowledgement levels do not change; per-order status in ORC-1 (for example `OK` or `UA`) is not evaluated, so `acknowledged` reflects the MSA code only. |
 | `reply_type` | string | `ack` | Source: `ack` answers every message with an `ACK`; `order_response` answers `OML^O33` with `ORL^O34`, `OML^O35` with `ORL^O36`, `OML^O21` with `ORL^O22` and `ORM^O01` with `ORR^O02` (MSH-9.3 `ORL_O34` and so on from v2.3.1), with the codes and MSA-2 an `ACK` would carry; other messages still get an `ACK`. The response is the base HL7 form, MSH and MSA only (the response group is optional in these structures): `AA` means the engine stored the order, it states no per-order acceptance (no ORC) and the reply is not an IHE LAW LAB-28 response. In enhanced mode only the application stage changes; the commit acknowledgement stays an `ACK`. |
 | `frame_timeout_ms` | integer | `30000` | 1000–300,000. A frame that has started (0x0B) and receives no further bytes for this long is discarded and the connection closed. The time counts while the engine waits for the frame's bytes, from when the frames completed by the same read are committed and acknowledged. |
 
@@ -450,15 +450,15 @@ instrument before use ([compliance guide](../operations/compliance.md) validatio
 | --- | --- |
 | `connectors[]` | `id`, `label`, `protocol`, `roles` (`source`, `destination`), `summary`, `settings` (a patch: only the listed settings change), `evidence`. |
 | `mappings[]` | `id`, `label`, `from` and `to` protocols, `summary`, `notes`, `mapping` (a destination `mapping` object, section 8), optional `destination_settings` (a patch for the destination connector), `sample` and `evidence`. |
-| `sample` | `input` and `output`: a synthetic source message and the destination message the mapping produces from it (records and segments end with CR; the AU input is the framed wire text). `header` holds the MSH fields an HL7 destination generates (`MSH.3` and so on) that `output` was produced with, and `source_settings` the AU settings needed to read `input`. |
+| `sample` | `input` and `output`: a synthetic source message and the destination message the mapping produces from it (records and segments end with CR; the AU input is the framed wire text). `header` holds the MSH fields an HL7 destination generates (`MSH.3` and so on) that `output` was produced with, and `source_settings` the source connector settings needed to read `input` (the AU parameter sheet, the ASTM specimen id path). |
 
 Code tables named `tests` ship empty and their lookups keep or skip an unlisted code, so an
-unedited preset does not fail a message for an unknown test. Result presets set
+unedited preset does not fail a message for an unknown test. ASTM result presets set
 `require_single_group`: a batch with several patients or orders is refused with a transform
 error instead of mixing specimens. Download presets state what one order record can carry as
 mapping preconditions (`require`): at most one `PID`, for OML exactly one `SPM`, 1 to 18 `OBR`
 (the 18-test limit of the Roche cobas e 411 order record), and one specimen id, priority and
-order control (and for Roche collection time and specimen type) across the `OBR`. Every `OBR`
+order control (for the ORM presets also specimen type, and for Roche collection time) across the `OBR`. Every `OBR`
 becomes one repetition of the universal test id (`for_each` with `mode: "repeat"`), so a
 message that satisfies them is carried completely; any other message is refused with a
 transform error and the delivery is `failed`, nothing is dropped or filtered. Tests apply every
