@@ -43,7 +43,7 @@ nix = { version = "0.31.3", default-features = false, features = ["user"] }
 # Reads secret values from the terminal without echo (`packie secrets set`).
 rpassword = "7.5.4"
 rusqlite = { version = "0.41.1", features = ["bundled"] }
-russh = { version = "0.65.1", default-features = false, features = ["ring"] }
+russh = { version = "0.65.4", default-features = false, features = ["ring", "rsa"] }
 russh-sftp = "3.0.1"
 rust_decimal = { version = "1.43.0", default-features = false, features = ["std", "serde"] }
 serde = { version = "1.0.229", features = ["derive"] }
@@ -66,6 +66,8 @@ uuid = { version = "1.29.0", features = ["v7", "serde"] }
 # Dev-only crates
 insta = "1.49.0"
 proptest = "1.12.0"
+# Random RSA keys for the SFTP tests (the version ssh-key generates keys with).
+rand = "0.10.3"
 tempfile = "3.27.0"
 
 [workspace.lints.rust]
