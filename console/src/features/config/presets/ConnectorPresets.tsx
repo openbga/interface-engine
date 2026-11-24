@@ -39,8 +39,14 @@ export function SettingsPlanTable({
           {changes.map((change) => (
             <tr key={change.field}>
               <th scope="row">{change.label}</th>
-              <td>{show(change.now)}</td>
-              <td>{change.changes ? <strong>{show(change.becomes)}</strong> : "already set"}</td>
+              <td>{change.shown?.now ?? show(change.now)}</td>
+              <td>
+                {change.changes ? (
+                  <strong>{change.shown?.becomes ?? show(change.becomes)}</strong>
+                ) : (
+                  "already set"
+                )}
+              </td>
             </tr>
           ))}
         </tbody>

@@ -12,6 +12,7 @@ name = "packie"
 path = "src/main.rs"
 
 [dependencies]
+base64 = { workspace = true }
 clap = { workspace = true, features = ["env"] }
 rpassword = { workspace = true }
 serde = { workspace = true }

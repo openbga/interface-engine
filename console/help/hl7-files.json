@@ -1,0 +1,15 @@
+{
+  "id": "hl7-files",
+  "title": "HL7 files",
+  "summary": "Writing each HL7 message as a file to a folder or SFTP server.",
+  "routes": [],
+  "sections": [
+    {
+      "title": "The destination",
+      "paragraphs": [
+        "An HL7 v2 files destination writes each message as one file to a folder or SFTP server, for receivers that collect files instead of listening for a connection. Its settings (a JSON object) give the file_name, which may use {sample_id}, {control_id}, {message_id}, {date}, {time} and {seq}, and the header fields MSH-3 to MSH-6 of the messages it builds.",
+        "Writing the file is all the engine can confirm: the delivery is complete when the file is in place. A message larger than max_message_bytes is not written and the delivery fails. Without a mapping, messages from an HL7 source are written as they arrived."
+      ]
+    }
+  ]
+}

@@ -32,6 +32,8 @@ import type {
   MessagePage,
   MessageQuery,
   NotificationResult,
+  PdfReportTestRequest,
+  PdfReportTestResult,
   ProbeReport,
   ReportFile,
   ResendRequest,
@@ -90,6 +92,12 @@ export interface EngineApi {
   testEndpoint(request: EndpointTestRequest): Promise<ProbeReport>;
   /** Sends one test message to every notification target the engine has; empty when none is configured. Audited. */
   testNotification(): Promise<NotificationResult[]>;
+  /**
+   * Reads a PDF report with a template that need not be saved, and maps it for a destination
+   * when one is given; stores and sends nothing. A template or destination the engine's rules
+   * reject rejects with `validation`. Audited by the engine.
+   */
+  testPdfReport(request: PdfReportTestRequest): Promise<PdfReportTestResult>;
 
   // Commands
   pauseChannel(id: string): Promise<void>;

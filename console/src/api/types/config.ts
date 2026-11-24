@@ -44,7 +44,20 @@ export interface TcpListenerEndpointConfig extends EndpointConfigBase {
   keepalive: boolean;
 }
 
-export interface FolderEndpointConfig extends EndpointConfigBase {
+/**
+ * What a source does with a file once its content is stored (docs/spec/configuration.md §5.4).
+ * Folders are relative to the endpoint's folder or remote path.
+ */
+export interface FileConsumption {
+  onConsumed: "move" | "delete" | "leave";
+  processedDirectory: string;
+  /** PDF report sources: where a report the source filters leave out goes; empty for `processedDirectory`. */
+  filteredDirectory: string;
+  /** PDF report sources: where a report that cannot be read goes; empty for `processedDirectory`. */
+  invalidDirectory: string;
+}
+
+export interface FolderEndpointConfig extends EndpointConfigBase, FileConsumption {
   kind: "folder";
   path: string;
   mode: "watch" | "poll";
@@ -53,7 +66,7 @@ export interface FolderEndpointConfig extends EndpointConfigBase {
   filePattern: string;
 }
 
-export interface SftpEndpointConfig extends EndpointConfigBase {
+export interface SftpEndpointConfig extends EndpointConfigBase, FileConsumption {
   kind: "sftp";
   host: string;
   port: number;
@@ -277,7 +290,9 @@ export type Step =
   | { step: "split"; separator: string; take: number }
   /** At most `length` characters from `start` (0-based); null for the rest of the text. */
   | { step: "slice"; start: number; length: number | null }
-  | { step: "replace"; find: string; with: string };
+  | { step: "replace"; find: string; with: string }
+  /** The text at `from` (another field of the source) removed from the end, at a word boundary. */
+  | { step: "strip_suffix"; from: string };
 
 export type StepKind = Step["step"];
 

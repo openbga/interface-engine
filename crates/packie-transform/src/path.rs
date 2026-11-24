@@ -1,4 +1,4 @@
-//! Field paths (configuration.md §8). One parser, four syntaxes, one result type.
+//! Field paths (configuration.md §8). One parser, five syntaxes, one result type.
 //!
 //! | Syntax | Shape | Examples |
 //! | --- | --- | --- |
@@ -6,6 +6,7 @@
 //! | ASTM | `R[occ].field[rep].component` | `R.4`, `O[1].3`, `P.3` |
 //! | AU | `name` or `test[occ].name` | `sample_id`, `test[0].value` |
 //! | Delimited | `col[occ].name` | `col.sample_id`, `col[1].result` |
+//! | PDF report | `field.name` or `report.name` | `field.dob`, `report.file_base64` |
 //!
 //! Occurrences and repetitions count from 0 and default to 0; fields, components and
 //! subcomponents count from 1. Inside `for_each` a path may begin with `$.` and omit the
@@ -33,6 +34,8 @@ pub enum Syntax {
     Au,
     /// `col[occ].name`.
     Delimited,
+    /// `field.<name>` (a template field) or `report.<name>` (`pages`, `file_base64`).
+    Pdf,
 }
 
 /// Whether a path starts at the message or at the current `for_each` occurrence.
@@ -102,6 +105,7 @@ impl Path {
             Syntax::Hl7 | Syntax::Astm => path.parse_numbered(&mut cursor)?,
             Syntax::Au => path.parse_au(&mut cursor)?,
             Syntax::Delimited => path.parse_delimited(&mut cursor)?,
+            Syntax::Pdf => path.parse_pdf(&mut cursor)?,
         }
         if cursor.pos < text.len() {
             return Err(cursor.error("unexpected character"));
@@ -303,6 +307,30 @@ impl Path {
         self.field = FieldRef::Name(cursor.name()?);
         Ok(())
     }
+
+    fn parse_pdf(&mut self, cursor: &mut Cursor<'_>) -> Result<(), PathError> {
+        let start = cursor.pos;
+        if self.scope == Scope::Current {
+            return Err(PathError::new(
+                start,
+                "PDF reports have no repeating records, so `$.` paths do not apply",
+            ));
+        }
+        let record = cursor.word();
+        if record != "field" && record != "report" {
+            return Err(PathError::new(
+                start,
+                "PDF report paths are field.<name> or report.<name>",
+            ));
+        }
+        self.record = Some(record.to_owned());
+        cursor.expect(
+            '.',
+            "expected `.` before the name; PDF report fields have no occurrences",
+        )?;
+        self.field = FieldRef::Name(cursor.name()?);
+        Ok(())
+    }
 }
 
 impl fmt::Display for Path {
@@ -330,6 +358,7 @@ pub(crate) fn record_name_ok(syntax: Syntax, name: &str) -> bool {
         ),
         Syntax::Au => name == "test",
         Syntax::Delimited => name == "col",
+        Syntax::Pdf => false,
     }
 }
 
@@ -505,6 +534,15 @@ mod tests {
         let p = parse(Syntax::Delimited, "col[1].sample_id");
         assert_eq!((p.record(), p.occurrence()), (Some("col"), 1));
         assert_eq!(parse(Syntax::Delimited, "col.result").occurrence(), 0);
+        let p = parse(Syntax::Pdf, "field.dob");
+        assert_eq!(
+            (p.record(), p.field()),
+            (Some("field"), &FieldRef::Name("dob".into()))
+        );
+        assert_eq!(
+            parse(Syntax::Pdf, "report.file_base64").record(),
+            Some("report")
+        );
     }
 
     #[test]
@@ -527,6 +565,10 @@ mod tests {
             (Syntax::Delimited, "row.x", 0),
             (Syntax::Delimited, "col.", 4),
             (Syntax::Delimited, "col.Name", 4),
+            (Syntax::Pdf, "row.x", 0),
+            (Syntax::Pdf, "field[1].dob", 5),
+            (Syntax::Pdf, "$.dob", 2),
+            (Syntax::Pdf, "report.", 7),
         ];
         for (syntax, text, position) in cases {
             assert_eq!(fail(syntax, text).position, position, "{text}");
@@ -537,7 +579,7 @@ mod tests {
     proptest! {
         #[test]
         fn parser_never_panics_and_errors_stay_in_bounds(text in "\\PC{0,40}") {
-            for syntax in [Syntax::Hl7, Syntax::Astm, Syntax::Au, Syntax::Delimited] {
+            for syntax in [Syntax::Hl7, Syntax::Astm, Syntax::Au, Syntax::Delimited, Syntax::Pdf] {
                 if let Err(error) = Path::parse(syntax, &text) {
                     prop_assert!(error.position <= text.len());
                     prop_assert!(text.is_char_boundary(error.position));
@@ -547,7 +589,7 @@ mod tests {
 
         #[test]
         fn path_like_text_never_panics(text in "[A-Z$.\\[\\]0-9a-z_]{0,24}") {
-            for syntax in [Syntax::Hl7, Syntax::Astm, Syntax::Au, Syntax::Delimited] {
+            for syntax in [Syntax::Hl7, Syntax::Astm, Syntax::Au, Syntax::Delimited, Syntax::Pdf] {
                 if let Ok(path) = Path::parse(syntax, &text) {
                     prop_assert_eq!(path.as_str(), text.as_str());
                     let _ = path.resolved("OBX", 3);

@@ -28,6 +28,8 @@ packie-routing = { path = "crates/packie-routing" }
 packie-notify = { path = "crates/packie-notify" }
 
 # External crates
+# Base64 for embedded PDF reports and the PDF test tool.
+base64 = "0.23"
 clap = { version = "4.6.7", features = ["derive"] }
 csv = "1.4.0"
 fs4 = { version = "1.1.0", default-features = false, features = ["sync"] }
@@ -35,13 +37,13 @@ interprocess = { version = "2.4.7", features = ["tokio"] }
 jiff = { version = "0.2.39", features = ["serde"] }
 keyring = "4.2.0"
 # SMTP alert e-mail; rustls only (no OpenSSL, no native-tls).
-lettre = { version = "0.11.23", default-features = false, features = ["builder", "smtp-transport", "tokio1", "tokio1-rustls-tls"] }
+lettre = { version = "0.11.24", default-features = false, features = ["builder", "smtp-transport", "tokio1", "tokio1-rustls-tls"] }
 notify = "8.2.1"
 nix = { version = "0.31.3", default-features = false, features = ["user"] }
 # Reads secret values from the terminal without echo (`packie secrets set`).
 rpassword = "7.5.4"
 rusqlite = { version = "0.41.1", features = ["bundled"] }
-russh = { version = "0.65.1", default-features = false, features = ["ring"] }
+russh = { version = "0.65.4", default-features = false, features = ["ring", "rsa"] }
 russh-sftp = "3.0.1"
 rust_decimal = { version = "1.43.0", default-features = false, features = ["std", "serde"] }
 serde = { version = "1.0.229", features = ["derive"] }
@@ -64,6 +66,8 @@ uuid = { version = "1.29.0", features = ["v7", "serde"] }
 # Dev-only crates
 insta = "1.49.0"
 proptest = "1.12.0"
+# Random RSA keys for the SFTP tests (the version ssh-key generates keys with).
+rand = "0.10.3"
 tempfile = "3.27.0"
 
 [workspace.lints.rust]

@@ -60,10 +60,11 @@ attention or configuration. No cloud service, subscription or internet access is
 | --- | --- |
 | PRO-01 | ASTM E1381/E1394 (CLSI LIS01-A2/LIS02-A2): receive results and send orders/queries over serial and TCP, with checksum, retransmission and contention handling. |
 | PRO-02 | Olympus/Beckman AU400/AU640 fixed-width protocol over serial and TCP. |
-| PRO-03 | HL7 v2.x over MLLP as client and as listener, with original and enhanced acknowledgement modes and per-message acknowledgement tracking. |
+| PRO-03 | HL7 v2.x over MLLP as client and as listener, with original and enhanced acknowledgement modes and per-message acknowledgement tracking; HL7 messages written one per file to folders and SFTP servers. |
 | PRO-04 | Delimited files (CSV and similar) in and out, with templates that describe columns and the order of records. |
 | PRO-05 | Raw bytes (for bridges and for taps). |
 | PRO-06 | Each protocol has a conformance corpus of synthetic messages, including malformed input, and never panics on any input. |
+| PRO-07 | Born-digital PDF reports of a known layout read by a declared template that locates labelled fields, empty where the report has none, and carried whole into the mapped message (for example as an embedded HL7 document); a report that does not match its template is refused with a reason, never routed partially. Report files are moved apart by outcome (processed, filtered, invalid). |
 
 ## Console
 

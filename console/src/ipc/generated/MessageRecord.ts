@@ -48,6 +48,10 @@ abort_reason: string | null,
  */
 reason_code: string | null, 
 /**
+ * For an invalid PDF report: what failed, in template terms, never report text.
+ */
+reason_detail: string | null, 
+/**
  * The earlier message this one duplicates.
  */
 duplicate_of: string | null, 

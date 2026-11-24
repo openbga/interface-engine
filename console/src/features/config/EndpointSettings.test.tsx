@@ -227,3 +227,70 @@ describe("EndpointEditPage: connection settings", () => {
     });
   });
 });
+
+describe("EndpointEditPage: after a file is read", () => {
+  async function openFolder() {
+    const rendered = await openNewEndpoint(stubApi());
+    await pick(rendered.user, document.body, "Kind", "Folder");
+    await rendered.user.type(screen.getByRole("textbox", { name: /^Label/ }), "Reports");
+    await rendered.user.type(
+      screen.getByRole("textbox", { name: /^Folder path/ }),
+      "/data/reports",
+    );
+    return rendered;
+  }
+
+  it("moves files to processed by default and saves the filtered and unreadable folders", async () => {
+    const { api, user } = await openFolder();
+    const section = screen.getByRole("group", { name: "After a file is read" });
+    const processed = within(section).getByRole("textbox", { name: /^Processed folder/ });
+    expect((processed as HTMLInputElement).value).toBe("processed");
+    await user.type(within(section).getByRole("textbox", { name: /^Filtered reports/ }), "skipped");
+    await user.type(
+      within(section).getByRole("textbox", { name: /^Unreadable reports/ }),
+      "errors",
+    );
+    expect(await lastDocument(user, api)).toMatchObject({
+      kind: "folder",
+      onConsumed: "move",
+      processedDirectory: "processed",
+      filteredDirectory: "skipped",
+      invalidDirectory: "errors",
+    });
+  });
+
+  it("refuses a folder outside the endpoint's own before calling the engine", async () => {
+    const { api, user } = await openFolder();
+    await user.type(screen.getByRole("textbox", { name: /^Filtered reports/ }), "../elsewhere");
+    await user.click(screen.getByRole("button", { name: "Validate" }));
+    expect(
+      await screen.findByText("Enter a folder inside the endpoint's folder, such as processed."),
+    ).toBeTruthy();
+    expect(api.validateConfig).not.toHaveBeenCalled();
+  });
+
+  it("drops the outcome folders when files are deleted instead", async () => {
+    const { api, user } = await openFolder();
+    await user.type(screen.getByRole("textbox", { name: /^Filtered reports/ }), "skipped");
+    await pick(user, document.body, "Then", "Delete it");
+    expect(screen.queryByRole("textbox", { name: /^Filtered reports/ })).toBeNull();
+    expect(await lastDocument(user, api)).toMatchObject({
+      onConsumed: "delete",
+      filteredDirectory: "",
+    });
+  });
+
+  it("keeps the folders of an existing SFTP endpoint", async () => {
+    const doc = sampleConfig();
+    doc.endpoints.push({
+      ...sampleSftp(),
+      filteredDirectory: "skipped",
+      invalidDirectory: "errors",
+    } as never);
+    const api = stubApi({ getConfig: async () => doc });
+    await openEndpoint("partner-sftp", "Partner SFTP", api);
+    expect(
+      (screen.getByRole("textbox", { name: /^Unreadable reports/ }) as HTMLInputElement).value,
+    ).toBe("errors");
+  });
+});

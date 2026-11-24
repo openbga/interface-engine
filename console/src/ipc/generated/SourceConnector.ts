@@ -2,7 +2,9 @@
 import type { AstmSettings } from "./AstmSettings";
 import type { AuSettings } from "./AuSettings";
 import type { DelimitedSettings } from "./DelimitedSettings";
+import type { Hl7FileSettings } from "./Hl7FileSettings";
 import type { Hl7Settings } from "./Hl7Settings";
+import type { PdfReportSettings } from "./PdfReportSettings";
 
 /**
  * The source connector: an endpoint bound to a protocol.
@@ -15,4 +17,4 @@ endpoint: string,
 /**
  * Default `true`.
  */
-duplicate_detection: boolean, } & ({ "protocol": "astm", "settings": AstmSettings } | { "protocol": "au", "settings": AuSettings } | { "protocol": "hl7_mllp", "settings": Hl7Settings } | { "protocol": "delimited_file", "settings": DelimitedSettings } | { "protocol": "raw" });
+duplicate_detection: boolean, } & ({ "protocol": "astm", "settings": AstmSettings } | { "protocol": "au", "settings": AuSettings } | { "protocol": "hl7_mllp", "settings": Hl7Settings } | { "protocol": "hl7_file", "settings": Hl7FileSettings } | { "protocol": "delimited_file", "settings": DelimitedSettings } | { "protocol": "pdf_report", "settings": PdfReportSettings } | { "protocol": "raw" });

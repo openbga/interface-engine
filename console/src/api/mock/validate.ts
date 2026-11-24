@@ -1,3 +1,4 @@
+import { passesThrough } from "@/lib/protocols";
 import type {
   ChannelConfig,
   ConfigDocument,
@@ -156,7 +157,10 @@ function validateDestination(
     error(issues, `${path}.label`, "The label is required and at most 100 characters.");
   }
   // `passthrough_protocol`: with no mapping the original message is delivered as it is.
-  if (destination.mappings.length === 0 && destination.protocol !== channel.source.protocol) {
+  if (
+    destination.mappings.length === 0 &&
+    !passesThrough(channel.source.protocol, destination.protocol)
+  ) {
     error(
       issues,
       `${path}.protocol`,

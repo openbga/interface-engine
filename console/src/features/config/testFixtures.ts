@@ -1,6 +1,7 @@
 // Hand-made data and a stub engine for this feature's tests.
 import { vi } from "vitest";
 import type { EngineApi } from "@/api/engine";
+import { DEFAULT_CONSUMPTION } from "@/api/ipc/endpointConfig";
 import type {
   ApplyPlan,
   ConfigDocument,
@@ -126,6 +127,7 @@ export function sampleSftp(): EndpointConfig {
     remotePath: "/outbound",
     pollIntervalSec: 60,
     filePattern: "*",
+    ...DEFAULT_CONSUMPTION,
   };
 }
 
@@ -140,6 +142,7 @@ function sampleFolder(): EndpointConfig {
     mode: "watch",
     pollIntervalSec: 30,
     filePattern: "*.csv",
+    ...DEFAULT_CONSUMPTION,
   };
 }
 

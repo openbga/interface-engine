@@ -199,6 +199,7 @@ impl Validator {
             self.reference(&endpoint_path, source.endpoint, channel.enabled, endpoints)
         {
             self.protocol_fits(&source_path, &source.protocol, endpoint.kind());
+            self.outcome_directories(&source_path, &source.protocol, endpoint);
         }
         self.protocol(&source_path, &source.protocol, Role::Source);
         let schema = source.protocol.schema();
@@ -239,10 +240,11 @@ impl Validator {
         self.protocol(at, &d.protocol, Role::Destination);
         self.filters(&format!("{at}.filters"), &d.filters, source);
         match &d.mapping {
-            None if d.protocol.kind() != channel.source.protocol.kind() => self.err(
+            None if !d.protocol.passes_through(&channel.source.protocol) => self.err(
                 ProblemCode::PassthroughProtocol,
                 format!("{at}.mapping"),
-                "without a mapping the destination must use the source's protocol",
+                "without a mapping the destination must use the source's protocol (or hl7_file \
+                 for an hl7_mllp source)",
             ),
             Some(mapping) => {
                 self.mapping(

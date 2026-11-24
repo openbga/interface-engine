@@ -48,10 +48,13 @@ const TABLE: Row[] = [
   ["endpoints[6].settings.auth.passphrase", "endpoints[6].passphraseSecretName"],
   ["endpoints[6].settings.host_key_fingerprint", "endpoints[6].hostKeyFingerprint"],
   ["endpoints[6].settings.remote_directory", "endpoints[6].remotePath"],
+  // what a file source does after reading
+  ["endpoints[5].settings.processed_directory", "endpoints[5].processedDirectory"],
+  ["endpoints[5].settings.invalid_directory", "endpoints[5].invalidDirectory"],
   // endpoint settings the console does not model stay as the engine names them
   ["endpoints[1].settings.read_timeout_ms", "endpoints[1].settings.read_timeout_ms"],
   ["endpoints[4].settings.accept_backlog", "endpoints[4].settings.accept_backlog"],
-  ["endpoints[5].settings.processed_directory", "endpoints[5].settings.processed_directory"],
+  ["endpoints[5].settings.write_mode", "endpoints[5].settings.write_mode"],
   ["endpoints[6].settings.operation_timeout_ms", "endpoints[6].settings.operation_timeout_ms"],
   ["endpoints[1].settings.virtual_link", "endpoints[1].settings.virtual_link"],
   ["endpoints[1].tags", "endpoints[1].tags"],
@@ -279,6 +282,7 @@ describe("toUiPath with the document the engine checked", () => {
             mapping: { rules: [{ op: "explode", to: "A" }] },
           },
           { destination_id: "d2", label: "D2", endpoint: "b", protocol: "astm" },
+          { destination_id: "d3", label: "D3", endpoint: "b", protocol: "hl7_file" },
         ],
       },
       {
@@ -329,6 +333,12 @@ describe("toUiPath with the document the engine checked", () => {
     expect(toUiPath("channels[0].destinations[0].settings.charset", document)).toBe(
       "channels[0].destinations[0].settings.charset",
     );
+    // An HL7 file destination's settings, header fields included, are one JSON text.
+    for (const key of ["version", "file_name", "sending_facility"]) {
+      expect(toUiPath(`channels[0].destinations[3].settings.${key}`, document)).toBe(
+        "channels[0].destinations[3].settings.templateJson",
+      );
+    }
   });
 
   it("translates bridge fields", () => {

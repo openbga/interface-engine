@@ -16,6 +16,7 @@ import {
   HOST_KEY_FINGERPRINT,
   PEER_ADDRESS,
   portNumber,
+  subfolder,
   wholeNumber,
 } from "./validators";
 
@@ -42,6 +43,11 @@ const AUTH_METHODS = [
 const FOLDER_MODES = [
   { id: "watch", label: "Watch for new files" },
   { id: "poll", label: "Poll on a schedule" },
+];
+const ON_CONSUMED = [
+  { id: "move", label: "Move it into a folder" },
+  { id: "delete", label: "Delete it" },
+  { id: "leave", label: "Leave it where it is" },
 ];
 
 function SerialFields() {
@@ -179,6 +185,55 @@ function FolderFields() {
   );
 }
 
+/**
+ * What a source does with a file once its content is stored (docs/spec/configuration.md §5.4),
+ * and for PDF reports the folders that keep filtered and unreadable reports apart.
+ */
+function AfterReading() {
+  const form = useFormContext<EndpointFormValues>();
+  const action = useWatch({ control: form.control, name: "onConsumed" });
+  return (
+    <FieldSection title="After a file is read">
+      <FieldGrid>
+        <ChoiceInput
+          name="onConsumed"
+          label="Then"
+          options={ON_CONSUMED}
+          isRequired
+          description={
+            action === "leave"
+              ? "Duplicate detection keeps a file left in place from being processed again."
+              : "Applies when a channel reads from this endpoint; written files stay."
+          }
+        />
+        {action === "move" && (
+          <>
+            <TextInput
+              name="processedDirectory"
+              label="Processed folder"
+              isRequired
+              validate={subfolder}
+              description="Inside the endpoint's folder; created when needed."
+            />
+            <TextInput
+              name="filteredDirectory"
+              label="Filtered reports folder"
+              validate={subfolder}
+              description="PDF report sources: reports the channel's filters leave out. Empty: the processed folder."
+            />
+            <TextInput
+              name="invalidDirectory"
+              label="Unreadable reports folder"
+              validate={subfolder}
+              description="PDF report sources: reports that cannot be read with the template. Empty: the processed folder."
+            />
+          </>
+        )}
+      </FieldGrid>
+    </FieldSection>
+  );
+}
+
 interface SecretNameProps {
   /** The form field holding the name. */
   name: "secretName" | "passphraseSecretName";
@@ -284,8 +339,18 @@ export function ConnectionFields({ kind }: { kind: EndpointKind }) {
     case "tcp_listener":
       return <TcpListenerFields />;
     case "folder":
-      return <FolderFields />;
+      return (
+        <>
+          <FolderFields />
+          <AfterReading />
+        </>
+      );
     case "sftp":
-      return <SftpFields />;
+      return (
+        <>
+          <SftpFields />
+          <AfterReading />
+        </>
+      );
   }
 }

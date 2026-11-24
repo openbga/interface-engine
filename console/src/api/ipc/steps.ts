@@ -34,12 +34,27 @@ function sliceFromJson(json: Json): Step | null {
     : null;
 }
 
+function replaceFromJson(json: Json): Step | null {
+  const { find, with: replacement } = json;
+  return hasOnly(json, ["step", "find", "with"]) &&
+    typeof find === "string" &&
+    typeof replacement === "string"
+    ? { step: "replace", find, with: replacement }
+    : null;
+}
+
+function stripSuffixFromJson(json: Json): Step | null {
+  return hasOnly(json, ["step", "from"]) && typeof json.from === "string"
+    ? { step: "strip_suffix", from: json.from }
+    : null;
+}
+
 function stepFromJson(json: unknown): Step | null {
   if (!isRecord(json) || typeof json.step !== "string") return null;
   if (SIMPLE_STEPS.has(json.step)) {
     return hasOnly(json, ["step"]) ? ({ step: json.step } as Step) : null;
   }
-  const { chars, separator, take, find, with: replacement } = json;
+  const { chars, separator, take } = json;
   switch (json.step) {
     case "strip_leading":
       return hasOnly(json, ["step", "chars"]) && typeof chars === "string"
@@ -54,11 +69,9 @@ function stepFromJson(json: unknown): Step | null {
     case "slice":
       return sliceFromJson(json);
     case "replace":
-      return hasOnly(json, ["step", "find", "with"]) &&
-        typeof find === "string" &&
-        typeof replacement === "string"
-        ? { step: "replace", find, with: replacement }
-        : null;
+      return replaceFromJson(json);
+    case "strip_suffix":
+      return stripSuffixFromJson(json);
     default:
       return null;
   }

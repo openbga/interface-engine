@@ -194,6 +194,7 @@ pub(crate) fn audited(request: &Request) -> Option<Audited> {
             json!({ "kind": test.kind, "target": crate::checks::probe_target(test) }),
         ),
         Request::TestNotification => (AuditAction::NotificationTest, None, json!({})),
+        Request::TestPdfReport(test) => pdf_report_test(test),
         Request::RecordClientExport { kind, rows } => (
             AuditAction::ClientExport,
             None,
@@ -202,6 +203,19 @@ pub(crate) fn audited(request: &Request) -> Option<Audited> {
         other => return message_action(other),
     };
     Some(entry)
+}
+
+/// A PDF report test: report content is shown, so it is audited like a content view.
+fn pdf_report_test(test: &packie_ipc::pdf::PdfReportTest) -> Audited {
+    (
+        AuditAction::PdfReportTest,
+        test.message_id
+            .map(|id| (AuditObjectType::Message, id.to_string())),
+        json!({
+            "source": if test.message_id.is_some() { "message" } else { "file" },
+            "destination": test.destination.as_ref().map(|d| d.protocol.clone()),
+        }),
+    )
 }
 
 fn config_apply(base_version: u64, note: Option<&str>) -> Audited {

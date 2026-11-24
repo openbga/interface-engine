@@ -8,6 +8,8 @@ license.workspace = true
 publish.workspace = true
 
 [dependencies]
+# `report.file_base64` of PDF report models (already in the dependency tree).
+base64 = { workspace = true }
 jiff = { workspace = true }
 # Linear-time regular expressions for the `matches` filter operator (configuration.md §8.1).
 regex = "1.13"

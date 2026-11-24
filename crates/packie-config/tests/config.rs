@@ -1210,3 +1210,213 @@ fn a_busy_path_is_retried_on_windows_only() {
     assert!(result.is_err());
     assert_eq!(calls, 1);
 }
+
+/// The sample document with a PDF report channel: `inbox` the source folder's settings,
+/// `source` its protocol and settings, `destination` the one destination.
+fn pdf_channel(inbox: Value, source: &Value, destination: Value) -> Value {
+    let folder = |id: &str, settings: Value| json!({"endpoint_id": id, "label": id, "kind": "folder", "settings": settings});
+    let mut value = sample_value();
+    let endpoints = value["endpoints"].as_array_mut().unwrap();
+    endpoints.push(folder("reports-in", inbox));
+    endpoints.push(folder("reports-out", json!({"path": "/data/out"})));
+    value["channels"].as_array_mut().unwrap().push(json!({
+        "kind": "message", "channel_id": "reports", "label": "Reports",
+        "source": {"endpoint": "reports-in", "protocol": source["protocol"], "settings": source["settings"]},
+        "filters": [{"path": "field.birth_hospital_code", "op": "in", "value": ["F0001"]}],
+        "destinations": [destination],
+    }));
+    value
+}
+
+fn pdf_inbox() -> Value {
+    json!({"path": "/data/in", "filtered_directory": "skipped", "invalid_directory": "errors"})
+}
+
+fn pdf_template() -> Value {
+    json!({"protocol": "pdf_report", "settings": {
+        "phrase_gap": 2.5, "label_area_end": ["Results"],
+        "fields": [
+            {"name": "sample_id", "label": "Lab Number:", "required": true},
+            {"name": "dob", "label": "DOB:", "type": "datetime", "format": ["M/d/yyyy HH:mm", "M/d/yyyy H:mm"]},
+            {"name": "birth_hospital_code", "label": ["Birth Hospital:", "Hospital:"], "position": "below", "phrase": 1},
+            {"name": "recipient", "label": "Report sent to:", "position": "below", "line": 2, "indent": 60},
+        ],
+    }})
+}
+
+fn pdf_to_hl7() -> Value {
+    json!({
+        "destination_id": "hie", "label": "HIE", "endpoint": "lis-hl7", "protocol": "hl7_mllp",
+        "settings": {},
+        "mapping": {"rules": [
+            {"op": "copy", "from": "field.sample_id", "to": "PID.3.1"},
+            {"op": "copy", "from": "report.file_base64", "to": "OBX.5.5"},
+        ]},
+    })
+}
+
+#[test]
+fn pdf_report_settings_are_validated() {
+    let valid = pdf_channel(pdf_inbox(), &pdf_template(), pdf_to_hl7());
+    assert_eq!(problems(&valid), Vec::<String>::new());
+
+    let at = "channels[2].source.settings";
+    let mut bad = pdf_template();
+    bad["settings"] = json!({
+        "phrase_gap": 2.555, "max_pages": 0,
+        "fields": [
+            {"name": "Dob", "label": "DOB:"},
+            {"name": "x", "label": "X:", "line": 2},
+            {"name": "x", "label": [], "type": "date"},
+            {"name": "y", "label": "Y:", "position": "below", "indent": 601, "occurrence": -2},
+            {"name": "z", "label": "Z:", "position": "below", "phrase": -2},
+            {"name": "last", "label": "L:", "position": "below", "phrase": -1},
+        ],
+    });
+    assert_has(
+        &problems(&pdf_channel(pdf_inbox(), &bad, pdf_to_hl7())),
+        &[
+            &format!("{at}.max_pages: must be from 1 to 500"),
+            &format!("{at}.phrase_gap: must be from 0.5 to 20"),
+            &format!("{at}.fields[0].name: must match"),
+            &format!("{at}.fields[1].line: only used with position below"),
+            &format!("{at}.fields[2].name: duplicate field name"),
+            &format!("{at}.fields[2].label: must be one label or 1 to 8 labels"),
+            &format!("{at}.fields[2].format: date needs 1 to 4 formats"),
+            &format!("{at}.fields[3].occurrence: must be from -1 to 20"),
+            &format!("{at}.fields[3].indent: must be from 0 to 600"),
+            &format!("{at}.fields[4].phrase: must be from -1 to 20"),
+            // The filter and the mapping name fields the broken template does not have.
+            "channels[2].filters[0].path: unknown template field `birth_hospital_code`",
+            "channels[2].destinations[0].mapping.rules[0].from: unknown template field `sample_id`",
+        ],
+    );
+}
+
+#[test]
+fn pdf_reports_are_sources_only_and_own_the_outcome_directories() {
+    let mut destination = pdf_to_hl7();
+    destination["endpoint"] = json!("reports-out");
+    destination["protocol"] = json!("pdf_report");
+    destination["settings"] = pdf_template()["settings"].clone();
+    destination.as_object_mut().unwrap().remove("mapping");
+    assert_has(
+        &problems(&pdf_channel(pdf_inbox(), &pdf_template(), destination)),
+        &["channels[2].destinations[0].protocol: pdf_report is read from files only"],
+    );
+
+    let delimited = json!({"protocol": "delimited_file", "settings": {"columns": [{"name": "birth_hospital_code"}]}});
+    let mut to_hl7 = pdf_to_hl7();
+    to_hl7["mapping"] =
+        json!({"rules": [{"op": "copy", "from": "col.birth_hospital_code", "to": "PID.3.1"}]});
+    let found = problems(&pdf_channel(pdf_inbox(), &delimited, to_hl7));
+    assert!(
+        found.iter().any(
+            |p| p.starts_with("channels[2].source.endpoint: the endpoint's filtered_directory")
+        ),
+        "{found:#?}"
+    );
+
+    let mut deleting = pdf_inbox();
+    deleting["on_consumed"] = json!("delete");
+    deleting["invalid_directory"] = json!("skipped/");
+    assert_has(
+        &problems(&pdf_channel(deleting, &pdf_template(), pdf_to_hl7())),
+        &[
+            "endpoints[4].settings.invalid_directory: must differ",
+            "endpoints[4].settings.on_consumed: filtered_directory and invalid_directory need on_consumed move",
+        ],
+    );
+}
+
+fn hl7_file(settings: Value) -> Value {
+    json!({
+        "destination_id": "hie", "label": "HIE", "endpoint": "reports-out", "protocol": "hl7_file",
+        "settings": settings,
+        "mapping": {"rules": [
+            {"op": "copy", "from": "field.sample_id", "to": "PID.3.1"},
+            {"op": "copy", "from": "report.file_base64", "to": "OBX.5.5"},
+        ]},
+    })
+}
+
+#[test]
+fn hl7_file_settings_are_validated() {
+    use packie_core::{AckLevel, ProtocolKind};
+    let valid = hl7_file(json!({
+        "file_name": "ORU_{sample_id}_{date}{time}_{seq}.hl7", "sending_application": "PACKIE",
+        "sending_facility": "LAB", "processing_id": "T", "on_exists": "fail",
+    }));
+    let config =
+        RuntimeConfig::from_value(pdf_channel(pdf_inbox(), &pdf_template(), valid)).unwrap();
+    let ChannelConfig::Message(channel) = &config.channels[2] else {
+        panic!("a message channel");
+    };
+    let destination = &channel.destinations[0];
+    assert_eq!(destination.protocol.kind(), ProtocolKind::Hl7File);
+    assert_eq!(
+        destination
+            .effective_delivery(&channel.delivery)
+            .ack_required,
+        AckLevel::HandedOff
+    );
+
+    let mut bad = hl7_file(json!({
+        "version": "3.0", "sending_application": "A".repeat(181), "max_message_bytes": 10,
+        "on_exists": "append",
+    }));
+    bad["delivery"] = json!({"ack_required": "accepted"});
+    let at = "channels[2].destinations[0]";
+    assert_has(
+        &problems(&pdf_channel(pdf_inbox(), &pdf_template(), bad)),
+        &[
+            &format!("{at}.settings.version: must be 2.x or 2.x.y"),
+            &format!("{at}.settings.sending_application: must be at most 180 characters"),
+            &format!("{at}.settings.max_message_bytes: must be from 1024"),
+            &format!("{at}.settings.file_name: a destination needs a file name template"),
+            &format!("{at}.settings.on_exists: must be suffix, overwrite or fail"),
+            &format!("{at}.delivery.ack_required: hl7_file can prove at most handed_off"),
+        ],
+    );
+}
+
+#[test]
+fn hl7_files_are_written_to_folders_and_sftp_only() {
+    let mut over_tcp = hl7_file(json!({"file_name": "{message_id}.hl7"}));
+    over_tcp["endpoint"] = json!("lis-hl7");
+    assert_has(
+        &problems(&pdf_channel(pdf_inbox(), &pdf_template(), over_tcp)),
+        &["channels[2].destinations[0].protocol: hl7_file needs a folder or sftp endpoint"],
+    );
+
+    let source = json!({"protocol": "hl7_file", "settings": {"file_name": "{message_id}.hl7"}});
+    let found = problems(&pdf_channel(
+        json!({"path": "/data/in"}),
+        &source,
+        pdf_to_hl7(),
+    ));
+    assert!(
+        found
+            .iter()
+            .any(|p| p.starts_with("channels[2].source.protocol: hl7_file only writes files")),
+        "{found:#?}"
+    );
+}
+
+#[test]
+fn hl7_messages_pass_through_to_hl7_files_without_a_mapping() {
+    // An HL7 MLLP source written to files unchanged; any other source needs a mapping.
+    let mut value = pdf_channel(pdf_inbox(), &pdf_template(), pdf_to_hl7());
+    value["channels"][1]["source"]["protocol"] = json!("hl7_mllp");
+    value["channels"][1]["source"]["settings"] = json!({});
+    let mut unchanged = hl7_file(json!({"file_name": "{message_id}.hl7"}));
+    unchanged.as_object_mut().unwrap().remove("mapping");
+    value["channels"][1]["destinations"][0] = unchanged.clone();
+    assert_eq!(problems(&value), Vec::<String>::new());
+
+    value["channels"][2]["destinations"][0] = unchanged;
+    assert_has(
+        &problems(&value),
+        &["channels[2].destinations[0].mapping: without a mapping the destination must use"],
+    );
+}

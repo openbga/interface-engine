@@ -33,6 +33,7 @@ export const ACTION_LABELS: Readonly<Record<AuditAction, string>> = {
   traffic_view: "Traffic transcript opened",
   client_export: "Client export written",
   endpoint_test: "Endpoint tested",
+  pdf_report_test: "PDF report tested",
   notification_test: "Notification test sent",
   engine_start: "Engine started",
   engine_stop: "Engine stopped",

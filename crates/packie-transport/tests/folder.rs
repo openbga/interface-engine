@@ -368,3 +368,36 @@ async fn write_errors_do_not_repeat_the_file_name() {
         assert!(!refused.to_string().contains(SENTINEL), "{mode}: {refused}");
     }
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn files_move_into_outcome_directories_that_recursive_listing_skips() {
+    let dir = tempfile::tempdir().unwrap();
+    let config = folder(
+        dir.path(),
+        &json!({
+            "stable_seconds": 0, "recursive": true,
+            "filtered_directory": "skipped", "invalid_directory": "errors/pdf",
+        }),
+    );
+    let mut source = transports().file_source(&config).unwrap();
+    std::fs::create_dir_all(dir.path().join("in")).unwrap();
+    std::fs::write(dir.path().join("in/report.pdf"), "x").unwrap();
+    let unit = tokio::time::timeout(Duration::from_secs(10), source.next())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(unit.name, "in/report.pdf");
+    source.consumed_into(&unit, "skipped").await.unwrap();
+    assert!(dir.path().join("skipped/in/report.pdf").exists());
+
+    std::fs::write(dir.path().join("in/other.pdf"), "y").unwrap();
+    let unit = tokio::time::timeout(Duration::from_secs(10), source.next())
+        .await
+        .unwrap()
+        .unwrap();
+    source.consumed_into(&unit, "errors/pdf").await.unwrap();
+    assert!(dir.path().join("errors/pdf/in/other.pdf").exists());
+    // Moved files are never listed again, though the source descends into sub-directories.
+    let again = tokio::time::timeout(Duration::from_millis(2500), source.next()).await;
+    assert!(again.is_err(), "a moved file came back");
+}

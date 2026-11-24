@@ -1,3 +1,4 @@
+import { DEFAULT_CONSUMPTION } from "../ipc/endpointConfig";
 import type {
   EndpointConfig,
   FolderEndpointConfig,
@@ -81,6 +82,7 @@ function folder(id: string, label: string, path: string, filePattern: string) {
     mode: "watch",
     pollIntervalSec: 5,
     filePattern,
+    ...DEFAULT_CONSUMPTION,
   };
   return config;
 }
@@ -108,6 +110,7 @@ function sftp(
     remotePath,
     pollIntervalSec: 60,
     filePattern: "*",
+    ...DEFAULT_CONSUMPTION,
   };
   return config;
 }

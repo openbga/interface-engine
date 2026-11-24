@@ -8,7 +8,9 @@ use std::path::Path;
 
 use packie_config::profiles::{Catalog, ConnectorRole, MappingProfile, catalog};
 use packie_config::{RuntimeConfig, load_runtime_file};
-use packie_transform::{AstmModel, Hl7Model, Mapping, Model, Path as FieldPath, Schema, Syntax};
+use packie_transform::{
+    AstmModel, Hl7Model, Mapping, Model, Path as FieldPath, PdfModel, Schema, Syntax,
+};
 use serde_json::{Value, json};
 
 fn shipped() -> Catalog {
@@ -27,9 +29,25 @@ fn problems(document: &Value) -> Vec<String> {
     }
 }
 
-/// The sample document's message channel with this source and destination.
-fn channel(source: (&str, Value), destination: (&str, Value), mapping: Value) -> Value {
+/// The sample document's message channel with this source and destination. A PDF report
+/// source reads a folder; an HL7 file destination writes one, with a file name template.
+fn channel(source: (&str, Value), mut destination: (&str, Value), mapping: Value) -> Value {
     let mut document = base();
+    if source.0 == "pdf_report" {
+        document["endpoints"].as_array_mut().unwrap().push(json!({
+            "endpoint_id": "reports-in", "label": "Reports", "kind": "folder",
+            "settings": {"path": "/data/reports"},
+        }));
+        document["channels"][1]["source"]["endpoint"] = json!("reports-in");
+    }
+    if destination.0 == "hl7_file" {
+        document["endpoints"].as_array_mut().unwrap().push(json!({
+            "endpoint_id": "hl7-out", "label": "HL7 files", "kind": "folder",
+            "settings": {"path": "/data/hl7"},
+        }));
+        document["channels"][1]["destinations"][0]["endpoint"] = json!("hl7-out");
+        destination.1["file_name"] = json!("{message_id}.hl7");
+    }
     document["channels"][1]["source"]["protocol"] = json!(source.0);
     document["channels"][1]["source"]["settings"] = source.1;
     let destination_endpoint = &mut document["channels"][1]["destinations"][0];
@@ -74,6 +92,12 @@ fn every_connector_profile_is_a_valid_patch_for_each_of_its_roles() {
         assert!(settings.as_object().is_some_and(|o| !o.is_empty()));
         for role in &profile.roles {
             let document = match (profile.protocol.as_str(), role) {
+                // A report is never passed through: the destination maps it.
+                ("pdf_report", ConnectorRole::Source) => channel(
+                    ("pdf_report", settings.clone()),
+                    ("hl7_mllp", json!({})),
+                    json!({"rules": []}),
+                ),
                 (protocol, ConnectorRole::Source) => channel(
                     (protocol, settings.clone()),
                     (protocol, settings.clone()),
@@ -101,7 +125,13 @@ fn astm_or_hl7_source(protocol: &str) -> (&'static str, Value) {
 
 #[test]
 fn a_connector_profile_changes_only_what_it_lists() {
-    for profile in &shipped().connectors {
+    // A PDF report template is one whole (its fields need each other); the test above
+    // validates it complete.
+    for profile in shipped()
+        .connectors
+        .iter()
+        .filter(|p| p.protocol != "pdf_report")
+    {
         let keys: Vec<&String> = profile.settings.as_object().unwrap().keys().collect();
         for key in keys {
             // every key is a real setting: unknown keys are validation errors
@@ -119,8 +149,32 @@ fn a_connector_profile_changes_only_what_it_lists() {
     }
 }
 
+/// The file a PDF report sample stands for (its `report.file_base64`).
+const PDF_SAMPLE_FILE: &[u8] = b"%PDF-1.7 synthetic report";
+
+/// The template of the shipped PDF report connector profile, which PDF presets read.
+fn pdf_template() -> Value {
+    shipped()
+        .connectors
+        .iter()
+        .find(|p| p.protocol == "pdf_report")
+        .expect("a PDF report connector profile")
+        .settings
+        .clone()
+}
+
 fn model_of(protocol: &str, input: &str) -> Box<dyn packie_transform::Model> {
     match protocol {
+        // A PDF sample lists the template's fields, `name: value` per line.
+        "pdf_report" => {
+            let fields = input.split('\r').filter(|l| !l.is_empty()).map(|line| {
+                let (name, value) = line
+                    .split_once(": ")
+                    .unwrap_or((line.trim_end_matches(':'), ""));
+                (name.to_owned(), value.to_owned())
+            });
+            Box::new(PdfModel::new(fields, 1, PDF_SAMPLE_FILE.to_vec()))
+        }
         "astm" => Box::new(AstmModel::parse(input.as_bytes()).expect("sample parses as ASTM")),
         "hl7_mllp" => Box::new(Hl7Model::parse(input.as_bytes()).expect("sample parses as HL7")),
         other => panic!("sample of {other} is checked elsewhere"),
@@ -130,8 +184,16 @@ fn model_of(protocol: &str, input: &str) -> Box<dyn packie_transform::Model> {
 fn schema_of(protocol: &str) -> Schema {
     match protocol {
         "astm" => Schema::astm(),
-        "hl7_mllp" => Schema::hl7(),
+        "hl7_mllp" | "hl7_file" => Schema::hl7(),
         "au" => Schema::au(),
+        "pdf_report" => {
+            let fields = pdf_template()["fields"].as_array().unwrap().clone();
+            Schema::pdf(
+                fields
+                    .iter()
+                    .map(|f| f["name"].as_str().unwrap().to_owned()),
+            )
+        }
         other => panic!("unknown protocol {other}"),
     }
 }
@@ -155,7 +217,7 @@ fn run_on(preset: &MappingProfile, input: &str) -> Result<String, String> {
     .unwrap_or_else(|problems| panic!("{} should compile: {problems:?}", preset.id));
     let source = model_of(&preset.from, input);
     match preset.to.as_str() {
-        "hl7_mllp" => {
+        "hl7_mllp" | "hl7_file" => {
             let mut target = Hl7Model::new();
             for (path, value) in &preset.sample.header {
                 let path = FieldPath::parse(Syntax::Hl7, path).expect("header path");
@@ -234,11 +296,15 @@ fn collect_lookups(rules: &Value, found: &mut Vec<(String, String)>) {
 #[test]
 fn every_mapping_preset_is_valid_in_a_complete_document() {
     for preset in &shipped().mappings {
-        let source_settings = preset
-            .sample
-            .source_settings
-            .clone()
-            .unwrap_or_else(|| json!({}));
+        let source_settings = if preset.from == "pdf_report" {
+            pdf_template()
+        } else {
+            preset
+                .sample
+                .source_settings
+                .clone()
+                .unwrap_or_else(|| json!({}))
+        };
         let destination_settings = preset
             .destination_settings
             .clone()

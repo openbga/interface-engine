@@ -63,7 +63,8 @@ pub struct FolderSettings {
     /// Glob on the file name with `*` and `?`. Default `*`.
     #[serde(default = "star")]
     pub file_pattern: String,
-    /// Include sub-directories (except `processed_directory`). Default `false`.
+    /// Include sub-directories (except the processed, filtered and invalid directories).
+    /// Default `false`.
     #[serde(default)]
     pub recursive: bool,
     /// Files ending in any of these are never read.
@@ -81,6 +82,14 @@ pub struct FolderSettings {
     /// Relative to `path`; created when needed. Default `processed`.
     #[serde(default = "processed")]
     pub processed_directory: String,
+    /// `pdf_report` sources with `move`: where a `filtered` report goes. Default `null`
+    /// (`processed_directory`).
+    #[serde(default)]
+    pub filtered_directory: Option<String>,
+    /// `pdf_report` sources with `move`: where an `invalid` or `aborted` report goes.
+    /// Default `null` (`processed_directory`).
+    #[serde(default)]
+    pub invalid_directory: Option<String>,
     /// Default `atomic_rename`.
     #[serde(default)]
     pub write_mode: WriteMode,
@@ -116,7 +125,8 @@ pub struct SftpSettings {
     /// Glob on the file name with `*` and `?`. Default `*`.
     #[serde(default = "star")]
     pub file_pattern: String,
-    /// Include sub-directories (except `processed_directory`). Default `false`.
+    /// Include sub-directories (except the processed, filtered and invalid directories).
+    /// Default `false`.
     #[serde(default)]
     pub recursive: bool,
     /// Files ending in any of these are never read.
@@ -131,9 +141,63 @@ pub struct SftpSettings {
     /// Relative to `remote_directory`. Default `processed`.
     #[serde(default = "processed")]
     pub processed_directory: String,
+    /// As [`FolderSettings::filtered_directory`].
+    #[serde(default)]
+    pub filtered_directory: Option<String>,
+    /// As [`FolderSettings::invalid_directory`].
+    #[serde(default)]
+    pub invalid_directory: Option<String>,
     /// Default `atomic_rename`.
     #[serde(default)]
     pub write_mode: WriteMode,
+}
+
+/// What a source does with a file once its content is committed, and where moved files go
+/// (§5.4). Shared by folder and SFTP endpoints.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Consumption<'a> {
+    /// Move, delete or leave.
+    pub on_consumed: OnConsumed,
+    /// Where moved files go, and every file without its own directory below.
+    pub processed: &'a str,
+    /// Where a `filtered` report goes; `None` for `processed`.
+    pub filtered: Option<&'a str>,
+    /// Where an `invalid` or `aborted` report goes; `None` for `processed`.
+    pub invalid: Option<&'a str>,
+}
+
+impl Consumption<'_> {
+    /// Whether moves wait for the pipeline's decision (a filtered or invalid directory is set).
+    #[must_use]
+    pub const fn by_outcome(&self) -> bool {
+        self.filtered.is_some() || self.invalid.is_some()
+    }
+}
+
+impl FolderSettings {
+    /// The consumption settings.
+    #[must_use]
+    pub fn consumption(&self) -> Consumption<'_> {
+        Consumption {
+            on_consumed: self.on_consumed,
+            processed: &self.processed_directory,
+            filtered: self.filtered_directory.as_deref(),
+            invalid: self.invalid_directory.as_deref(),
+        }
+    }
+}
+
+impl SftpSettings {
+    /// The consumption settings.
+    #[must_use]
+    pub fn consumption(&self) -> Consumption<'_> {
+        Consumption {
+            on_consumed: self.on_consumed,
+            processed: &self.processed_directory,
+            filtered: self.filtered_directory.as_deref(),
+            invalid: self.invalid_directory.as_deref(),
+        }
+    }
 }
 
 /// SFTP authentication; secrets are references, never values.

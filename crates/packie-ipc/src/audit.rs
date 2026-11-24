@@ -144,6 +144,8 @@ audit_enum! {
         EndpointTest => "endpoint_test",
         /// A test message was sent to the notification targets.
         NotificationTest => "notification_test",
+        /// A PDF report was read with a template (report content was shown).
+        PdfReportTest => "pdf_report_test",
         /// The engine started.
         EngineStart => "engine_start",
         /// The engine stopped.

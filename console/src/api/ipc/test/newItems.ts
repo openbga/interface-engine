@@ -1,3 +1,4 @@
+import { DEFAULT_CONSUMPTION } from "@/api/ipc/endpointConfig";
 /** Builders for the items the `configNew` tests add to the rich document. */
 
 import type {
@@ -94,4 +95,5 @@ export const sftp = {
   remotePath: "/in",
   pollIntervalSec: 60,
   filePattern: "*",
+  ...DEFAULT_CONSUMPTION,
 } satisfies EndpointConfig;

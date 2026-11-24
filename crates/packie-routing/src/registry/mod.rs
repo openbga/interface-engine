@@ -355,6 +355,15 @@ impl ChannelRegistry for RoutingRegistry {
         Box::pin(probes::serial_ports())
     }
 
+    fn preview_output<'a>(
+        &'a self,
+        channel: &'a packie_config::MessageChannel,
+        destination: packie_core::ConnectorId,
+        original: &'a [u8],
+    ) -> BoxFuture<'a, Result<Result<Vec<u8>, String>, RegistryError>> {
+        Box::pin(async move { Ok(crate::message::preview(channel, destination, original).await) })
+    }
+
     fn probe_endpoint<'a>(
         &'a self,
         endpoint: &'a EndpointConfig,

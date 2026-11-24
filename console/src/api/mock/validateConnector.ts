@@ -13,7 +13,9 @@ const PROTOCOL_ENDPOINTS: Record<Protocol, readonly EndpointKind[]> = {
   astm: ["serial", "tcp_client", "tcp_listener"],
   au: ["serial", "tcp_client", "tcp_listener"],
   hl7_mllp: ["tcp_client", "tcp_listener"],
+  hl7_file: ["folder", "sftp"],
   delimited_file: ["folder", "sftp"],
+  pdf_report: ["folder", "sftp"],
   raw: [],
 };
 
@@ -72,17 +74,17 @@ function checkTemplate(connector: ConnectorConfig, path: string, issues: Issues)
   const at = `${path}.settings.templateJson`;
   const text = connector.settings.templateJson ?? "";
   if (blank(text)) {
-    error(issues, at, "The column template is required for delimited files.");
+    error(issues, at, "The template is required.");
     return;
   }
   try {
     const parsed: unknown = JSON.parse(text);
     if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-      error(issues, at, "The column template must be a JSON object, written with { }.");
+      error(issues, at, "The template must be a JSON object, written with { }.");
     }
   } catch (cause) {
     const reason = cause instanceof Error ? cause.message : "invalid JSON";
-    error(issues, at, `The column template is not valid JSON: ${reason}`);
+    error(issues, at, `The template is not valid JSON: ${reason}`);
   }
 }
 
@@ -179,6 +181,22 @@ function checkSettings(
   const { settings } = connector;
   switch (connector.protocol) {
     case "delimited_file":
+      checkTemplate(connector, path, issues);
+      return;
+    case "pdf_report":
+      if (role === "destination") {
+        error(
+          issues,
+          `${path}.protocol`,
+          "A PDF report is read from files only; it cannot be a destination.",
+        );
+      }
+      checkTemplate(connector, path, issues);
+      return;
+    case "hl7_file":
+      if (role === "source") {
+        error(issues, `${path}.protocol`, "HL7 files are only written; they cannot be a source.");
+      }
       checkTemplate(connector, path, issues);
       return;
     case "au":

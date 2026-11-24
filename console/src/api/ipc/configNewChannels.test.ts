@@ -254,7 +254,7 @@ describe("new channels are written sparse", () => {
       {
         severity: "error",
         path: "channels[3].source.settings.templateJson",
-        message: "A column template is required.",
+        message: "A template is required.",
       },
     ]);
   });

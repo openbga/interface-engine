@@ -117,7 +117,14 @@ The release sentence of requirements.md, clause by clause.
 | E-04 | HL7 MLLP client and listener in both acknowledgement modes | Per-message acknowledgement tracking; mismatched acknowledgements are ignored and logged | PRO-03 | `msg-hl7-in-ack`, `msg-hl7-out-ack-tracked` |
 | E-05 | Delimited files in and out, grouped records, quoting | Columns and order as templated; completion detection; oversize file aborted | PRO-04 | `msg-hl7-out-ack-tracked`, `crate: packie-files` |
 | E-06 | Raw bytes through bridges and taps | No parsing; counters and observed messages work with a framer | PRO-05 | `bridge-tcp-full-duplex`, `bridge-tap-hl7` |
-| E-07 | Conformance corpora including malformed and truncated input; property tests on framing and escaping | Typed errors for malformed input, never a panic, for every protocol | PRO-06 | `crate: packie-astm`, `packie-au`, `packie-hl7`, `packie-files` |
+| E-07 | Conformance corpora including malformed and truncated input; property tests on framing and escaping | Typed errors for malformed input, never a panic, for every protocol | PRO-06 | `crate: packie-astm`, `packie-au`, `packie-hl7`, `packie-files`, `packie-pdf` |
+| E-08 | A synthetic PDF report in the shipped layout written to a watched folder; the same file over SFTP | One message per file, committed before the file is moved; the fields as the template says; the mapped `ORU^R01` written as one HL7 file to a folder destination and to an SFTP destination, its `ED` `OBX-5` decoding to the original file byte for byte | PRO-03, PRO-07, EPT-03, EPT-04 | `msg-pdf-report-to-hl7-file`, `crate: packie-pdf`, `crate: packie-transport` |
+| E-09 | Variations within the layout: empty values (no medical record), absent labels, a second page repeating the patient grid, columns moved a few points, values wrapped below their label | Read correctly without changing the template; an absent value leaves its HL7 field empty, never `""` | PRO-07 | `crate: packie-pdf`, `crate: packie-transform` |
+| E-10 | Changes outside the layout: an unknown label in the label area, a missing required label, conflicting values between pages, a date that matches none of its formats | `invalid` with `template_mismatch` or `field_invalid` and a `reason_detail` naming the label, field or page, never report text; no delivery | PRO-07 | `msg-pdf-report-invalid`, `crate: packie-pdf` |
+| E-11 | A scanned report, an encrypted file, a truncated file, random bytes, an oversized or over-long file, glyphs without a character mapping | `pdf_no_text`, `pdf_unreadable`, `pdf_limits` or `aborted` (`file_too_large`); never a panic, never a shorter report | PRO-06, PRO-07 | `crate: packie-pdf`, fuzzing |
+| E-12 | Correct the template of an `invalid` report, then resend it with `new_message` | The stored original parses with the new template and is delivered | PRO-07, MSG-04 | `msg-pdf-report-invalid` |
+| E-13 | **Test with a PDF…** and `packie pdf test` with a template, a file and a destination | Extracted lines, model or reason, and the mapped message with the embedded file shortened; nothing stored or sent; audited once as `pdf_report_test` | PRO-07, P2 | `crate: packie-engine`, `cli`, console `pdfReportTest` |
+| E-14 | A source filter on the birth hospital's facility code with `filtered_directory` and `invalid_directory`: a report of a listed client, one of another client, an unreadable file, the listed report again, and an engine crash between a commit and its pipeline decision | Listed: `routed`, one HL7 file, PDF in `processed_directory`; other client: `filtered`, no HL7 file, PDF in `filtered_directory`; unreadable: `invalid`, PDF in `invalid_directory`; repeated: `duplicate`, no second HL7 file, PDF where the original went; after the crash the file ends in the right directory with one HL7 file | PRO-07, MSG-02, EPT-03 | `msg-pdf-report-folders` |
 
 ## 7. Configuration
 
@@ -182,7 +189,7 @@ Every id of requirements.md appears in at least one row above:
 | Endpoints | EPT-01..06 | B-01..B-13 |
 | Bridge channels | BRG-01..05 | C-01..C-14 |
 | Message channels | MSG-01..08 | D-01..D-20 |
-| Protocols | PRO-01..06 | E-01..E-07 |
+| Protocols | PRO-01..07 | E-01..E-14 |
 | Console | CON-01..08 | H-01..H-09 |
 | Logs | LOG-01..04 | G-01..G-09 |
 | Performance | PRF-01..03 | C-14, D-11, I-01..I-03 |

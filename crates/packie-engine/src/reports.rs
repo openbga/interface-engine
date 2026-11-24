@@ -1,7 +1,8 @@
 //! Read-only reports over the store: the selected-message export (P9) and the transmission
 //! verification report (P7). Both read through the registry's message queries.
 
-use packie_core::{DeliveryState, Timestamp};
+use packie_config::RuntimeConfig;
+use packie_core::{DeliveryState, ProtocolKind, Timestamp};
 use packie_ipc::messages::{
     MessageFilter, MessageList, MessageQuery, MessageRecord, MessageSort, MessageSummary,
 };
@@ -29,9 +30,11 @@ const COLUMNS: [&str; 12] = [
     "deliveries",
 ];
 
-/// One export chunk: the messages the filter selects, oldest first, from `offset`.
+/// One export chunk: the messages the filter selects, oldest first, from `offset`. A PDF
+/// report's body is its extracted text, read with its channel's template in `config`.
 pub(crate) async fn export(
     registry: &dyn ChannelRegistry,
+    config: &RuntimeConfig,
     request: &ExportRequest,
 ) -> Result<ExportChunk, RegistryError> {
     let limit = if request.include_bodies {
@@ -52,7 +55,7 @@ pub(crate) async fn export(
     }
     for summary in &list.messages {
         let body = if request.include_bodies {
-            Some(body_text(registry, summary).await?)
+            Some(body_text(registry, config, summary).await?)
         } else {
             None
         };
@@ -91,10 +94,12 @@ fn oldest_first(filter: &MessageFilter, offset: u32, limit: u32) -> MessageQuery
     }
 }
 
-/// The original body as UTF-8 text (invalid sequences replaced). A body that cannot be read
+/// The original body as UTF-8 text (invalid sequences replaced); a PDF report's extracted
+/// text, empty when it has none (its state and reason say why). A body that cannot be read
 /// in full fails the export rather than exporting empty text.
 async fn body_text(
     registry: &dyn ChannelRegistry,
+    config: &RuntimeConfig,
     summary: &MessageSummary,
 ) -> Result<String, RegistryError> {
     let record = registry.message(summary.message_id).await?;
@@ -107,6 +112,11 @@ async fn body_text(
                 summary.message_id
             ))
         })?;
+    if summary.protocol == ProtocolKind::PdfReport {
+        return Ok(crate::pdf_view::text(config, &record, bytes)
+            .await
+            .unwrap_or_default());
+    }
     Ok(String::from_utf8_lossy(&bytes).into_owned())
 }
 

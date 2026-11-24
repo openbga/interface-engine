@@ -1,5 +1,5 @@
-//! Delimited-file destinations: one file per delivery (`docs/spec/message-channels.md`
-//! §8).
+//! File destinations (delimited files and HL7 files): one file per delivery
+//! (`docs/spec/message-channels.md` §8).
 
 use std::time::Duration;
 
@@ -21,12 +21,16 @@ pub(super) async fn send_file(
     body: &[u8],
     limit: Duration,
 ) -> Outcome {
-    let ProtocolSettings::Delimited(settings) = &destination.protocol else {
-        return Outcome::new(AttemptResult::WriteFailed, AckLevel::None, true);
+    let (pattern, on_exists) = match &destination.protocol {
+        ProtocolSettings::Delimited(s) => (
+            s.file_name.as_deref().unwrap_or("{message_id}.csv"),
+            s.on_exists,
+        ),
+        ProtocolSettings::Hl7File(s) => (s.file_name.as_str(), s.on_exists),
+        _ => return Outcome::new(AttemptResult::WriteFailed, AckLevel::None, true),
     };
-    let pattern = settings.file_name.as_deref().unwrap_or("{message_id}.csv");
     let name = files::file_name(pattern, pending, Timestamp::now());
-    let written = tokio::time::timeout(limit, sink.write(&name, body, settings.on_exists)).await;
+    let written = tokio::time::timeout(limit, sink.write(&name, body, on_exists)).await;
     match written {
         Ok(Ok(written)) => {
             cx.counters_of(destination.endpoint).bytes_out(body.len());

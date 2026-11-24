@@ -88,6 +88,184 @@
         "enq_attempts": 7
       },
       "evidence": "A published LIS middleware interface guide (Siemens Atellica Data Manager) sends ENQ again up to 7 times instead of EOT when the receiver does not reply within 15 seconds."
+    },
+    {
+      "id": "pdf_newborn_screening_report",
+      "label": "PDF newborn screening report",
+      "protocol": "pdf_report",
+      "roles": [
+        "source"
+      ],
+      "summary": "Reads a newborn screening report with a patient grid, a results table, a recipient block and facility blocks: every grid label, the footer's last name and accession number, the report recipient and each facility with its code. Nothing is required, so a value the report does not print is empty.",
+      "settings": {
+        "label_area_end": [
+          "Results"
+        ],
+        "fields": [
+          {
+            "name": "patient_name",
+            "label": "Patient Name:"
+          },
+          {
+            "name": "gender",
+            "label": "Gender:"
+          },
+          {
+            "name": "mother_name",
+            "label": "Mother Name:"
+          },
+          {
+            "name": "dob",
+            "label": "DOB:",
+            "type": "datetime",
+            "format": "M/d/yyyy HH:mm"
+          },
+          {
+            "name": "birth_order",
+            "label": "Birth Order:"
+          },
+          {
+            "name": "mother_dob",
+            "label": "Mother DOB:"
+          },
+          {
+            "name": "race",
+            "label": "Race:"
+          },
+          {
+            "name": "birth_weight",
+            "label": "Birth Weight:"
+          },
+          {
+            "name": "mother_phone",
+            "label": "Mother Phone:"
+          },
+          {
+            "name": "medical_record",
+            "label": "Medical Record:"
+          },
+          {
+            "name": "gestational_age",
+            "label": "Gestational Age:"
+          },
+          {
+            "name": "meconium_ileus",
+            "label": "Meconium Ileus:"
+          },
+          {
+            "name": "kit_number",
+            "label": "Kit Number:"
+          },
+          {
+            "name": "nicu",
+            "label": "NICU:"
+          },
+          {
+            "name": "collected",
+            "label": "Date Collected:",
+            "type": "datetime",
+            "format": "M/d/yyyy HH:mm"
+          },
+          {
+            "name": "sample_id",
+            "label": "Lab Number:"
+          },
+          {
+            "name": "age_at_collection",
+            "label": "Age at Collection:"
+          },
+          {
+            "name": "received",
+            "label": "Date Received:",
+            "type": "date",
+            "format": "M/d/yyyy"
+          },
+          {
+            "name": "specimen_type",
+            "label": "Specimen Type:"
+          },
+          {
+            "name": "transfusion_date",
+            "label": "Transfusion Date:"
+          },
+          {
+            "name": "reported",
+            "label": "Date Reported:",
+            "type": "date",
+            "format": "M/d/yyyy"
+          },
+          {
+            "name": "food_source",
+            "label": "Food Source:"
+          },
+          {
+            "name": "collection_weight",
+            "label": "Collection Weight:"
+          },
+          {
+            "name": "printed",
+            "label": "Date Printed:",
+            "type": "date",
+            "format": "M/d/yyyy"
+          },
+          {
+            "name": "last_name",
+            "label": "Last Name:",
+            "occurrence": -1
+          },
+          {
+            "name": "accession_number",
+            "label": "Accession Number:"
+          },
+          {
+            "name": "footer_reported",
+            "label": "Reported Date:"
+          },
+          {
+            "name": "recipient",
+            "label": "Report sent to:",
+            "position": "below",
+            "indent": 60
+          },
+          {
+            "name": "birth_hospital",
+            "label": "Birth Hospital:",
+            "position": "below"
+          },
+          {
+            "name": "birth_hospital_code",
+            "label": "Birth Hospital:",
+            "position": "below",
+            "phrase": -1,
+            "indent": 170
+          },
+          {
+            "name": "collection_facility",
+            "label": "Collection Facility:",
+            "position": "below"
+          },
+          {
+            "name": "collection_facility_code",
+            "label": "Collection Facility:",
+            "position": "below",
+            "phrase": -1,
+            "indent": 170
+          },
+          {
+            "name": "physician",
+            "label": "Physician/Clinic",
+            "position": "below"
+          },
+          {
+            "name": "physician_facility_code",
+            "label": "Physician/Clinic",
+            "position": "below",
+            "phrase": -1,
+            "indent": 170
+          }
+        ]
+      },
+      "evidence": "Built from one synthetic report in the layout of a state newborn screening laboratory; test it with your own reports (Test with a PDF) before clinical use."
     }
   ],
   "mappings": [
@@ -1168,6 +1346,469 @@
         "output": "H|\\^&\rP|1\rO|1|SPEC1234||^^^FER\\^^^TSH|S||20261012110000||||A||||1||||||||||O\rL|1|N\r"
       },
       "evidence": "Roche/Hitachi cobas e 411 Host Interface Manual v2.2 (Nov 2013), test order record cobas-type download: O-3 specimen id, O-5 ^^^code^dilution repeated with \\, O-6 priority R or S, O-8 collection time, O-12 action code A, O-16 sample type 1/2/5, O-26 report type O; patient record P|1. Fixture is synthetic."
+    },
+    {
+      "id": "pdf_newborn_screening_to_hl7_oru",
+      "label": "PDF newborn screening report to HL7 ORU^R01 with the report embedded",
+      "from": "pdf_report",
+      "to": "hl7_file",
+      "summary": "Patient, mother, visit, order and specimen from the report's fields, the Lab Number as patient, account, visit and order number, and one OBX that carries the report itself (ED, Base64) under the panel from Specimen Type. A value the report does not print leaves its field empty.",
+      "notes": [
+        "Use it with the PDF newborn screening report connector profile, whose field names it reads.",
+        "Set what only your deployment knows: PID-3.4 (the assigning authority of the Lab Number), ORC-23 and OBR-17 (the laboratory's phone), and the panel's coding system in OBR-4.3 and OBX-3.3 (L, local, until the receiver names one).",
+        "Fill the race table with the receiver's codes for the values your reports print; an unlisted value leaves PID-10 empty.",
+        "The ordering provider (PV1-7, PV1-8, OBR-16) is the first line under Report sent to, split into last and first name at its last space; the mother's name likewise.",
+        "An embedded report makes the message about 4/3 of the PDF's size; the default max_message_bytes (1 MiB) fits reports up to about 750 KB. Raise it on the destination for larger reports."
+      ],
+      "mapping": {
+        "tables": {
+          "sex": {
+            "Female": "F",
+            "Male": "M",
+            "F": "F",
+            "M": "M",
+            "Unknown": "U"
+          },
+          "race": {
+            "Other": "2131-1^Other Race^CDCREC"
+          }
+        },
+        "rules": [
+          {
+            "op": "constant",
+            "value": "ORU^R01^ORU_R01",
+            "to": "MSH.9"
+          },
+          {
+            "op": "constant",
+            "value": "1",
+            "to": "PID.1"
+          },
+          {
+            "op": "copy",
+            "from": "field.sample_id",
+            "to": "PID.2"
+          },
+          {
+            "op": "copy",
+            "from": "field.sample_id",
+            "to": "PID.3.1"
+          },
+          {
+            "op": "constant",
+            "value": "PI",
+            "to": "PID.3.5"
+          },
+          {
+            "op": "copy",
+            "from": "field.last_name",
+            "to": "PID.5.1"
+          },
+          {
+            "op": "copy",
+            "from": "field.patient_name",
+            "to": "PID.5.2",
+            "steps": [
+              {
+                "step": "strip_suffix",
+                "from": "field.last_name"
+              }
+            ]
+          },
+          {
+            "op": "datetime",
+            "from": "field.dob",
+            "to": "PID.7",
+            "input": "M/d/yyyy HH:mm",
+            "output": "yyyyMMddHHmm"
+          },
+          {
+            "op": "lookup",
+            "from": "field.gender",
+            "table": "sex",
+            "to": "PID.8",
+            "on_missing": "skip",
+            "ignore_case": true
+          },
+          {
+            "op": "lookup",
+            "from": "field.race",
+            "table": "race",
+            "to": "PID.10",
+            "on_missing": "skip",
+            "ignore_case": true
+          },
+          {
+            "op": "constant",
+            "value": "S",
+            "to": "PID.16"
+          },
+          {
+            "op": "copy",
+            "from": "field.sample_id",
+            "to": "PID.18"
+          },
+          {
+            "op": "when",
+            "condition": {
+              "path": "field.mother_name",
+              "op": "exists"
+            },
+            "then": [
+              {
+                "op": "constant",
+                "value": "1",
+                "to": "NK1.1"
+              },
+              {
+                "op": "copy",
+                "from": "field.mother_name",
+                "to": "NK1.2.1",
+                "steps": [
+                  {
+                    "step": "trim"
+                  },
+                  {
+                    "step": "split",
+                    "separator": " ",
+                    "take": -1
+                  }
+                ]
+              },
+              {
+                "op": "copy",
+                "from": "field.mother_name",
+                "to": "NK1.2.2",
+                "steps": [
+                  {
+                    "step": "trim"
+                  },
+                  {
+                    "step": "split",
+                    "separator": " ",
+                    "take": 0
+                  }
+                ]
+              },
+              {
+                "op": "constant",
+                "value": "MTH",
+                "to": "NK1.3.1"
+              },
+              {
+                "op": "copy",
+                "from": "field.mother_phone",
+                "to": "NK1.5"
+              },
+              {
+                "op": "constant",
+                "value": "N",
+                "to": "NK1.7.1"
+              }
+            ]
+          },
+          {
+            "op": "constant",
+            "value": "1",
+            "to": "PV1.1"
+          },
+          {
+            "op": "constant",
+            "value": "N",
+            "to": "PV1.2"
+          },
+          {
+            "op": "copy",
+            "from": "field.birth_hospital_code",
+            "to": "PV1.3.4"
+          },
+          {
+            "op": "constant",
+            "value": "N",
+            "to": "PV1.4"
+          },
+          {
+            "op": "copy",
+            "from": "field.recipient",
+            "to": "PV1.7.2",
+            "steps": [
+              {
+                "step": "trim"
+              },
+              {
+                "step": "split",
+                "separator": " ",
+                "take": -1
+              }
+            ]
+          },
+          {
+            "op": "copy",
+            "from": "field.recipient",
+            "to": "PV1.7.3",
+            "steps": [
+              {
+                "step": "trim"
+              },
+              {
+                "step": "split",
+                "separator": " ",
+                "take": 0
+              }
+            ]
+          },
+          {
+            "op": "copy",
+            "from": "field.recipient",
+            "to": "PV1.8.2",
+            "steps": [
+              {
+                "step": "trim"
+              },
+              {
+                "step": "split",
+                "separator": " ",
+                "take": -1
+              }
+            ]
+          },
+          {
+            "op": "copy",
+            "from": "field.recipient",
+            "to": "PV1.8.3",
+            "steps": [
+              {
+                "step": "trim"
+              },
+              {
+                "step": "split",
+                "separator": " ",
+                "take": 0
+              }
+            ]
+          },
+          {
+            "op": "copy",
+            "from": "field.sample_id",
+            "to": "PV1.19"
+          },
+          {
+            "op": "datetime",
+            "from": "field.received",
+            "to": "PV1.44",
+            "input": "M/d/yyyy",
+            "output": "yyyyMMdd"
+          },
+          {
+            "op": "constant",
+            "value": "RE",
+            "to": "ORC.1"
+          },
+          {
+            "op": "copy",
+            "from": "field.sample_id",
+            "to": "ORC.3"
+          },
+          {
+            "op": "copy",
+            "from": "field.physician",
+            "to": "ORC.21.1"
+          },
+          {
+            "op": "copy",
+            "from": "field.physician_facility_code",
+            "to": "ORC.21.10"
+          },
+          {
+            "op": "constant",
+            "value": "1",
+            "to": "OBR.1"
+          },
+          {
+            "op": "copy",
+            "from": "field.sample_id",
+            "to": "OBR.3"
+          },
+          {
+            "op": "copy",
+            "from": "field.specimen_type",
+            "to": "OBR.4.1",
+            "steps": [
+              {
+                "step": "upper"
+              }
+            ]
+          },
+          {
+            "op": "copy",
+            "from": "field.specimen_type",
+            "to": "OBR.4.2"
+          },
+          {
+            "op": "constant",
+            "value": "L",
+            "to": "OBR.4.3"
+          },
+          {
+            "op": "datetime",
+            "from": "field.collected",
+            "to": "OBR.7",
+            "input": "M/d/yyyy HH:mm",
+            "output": "yyyyMMddHHmm"
+          },
+          {
+            "op": "datetime",
+            "from": "field.received",
+            "to": "OBR.14",
+            "input": "M/d/yyyy",
+            "output": "yyyyMMdd"
+          },
+          {
+            "op": "copy",
+            "from": "field.recipient",
+            "to": "OBR.16.2",
+            "steps": [
+              {
+                "step": "trim"
+              },
+              {
+                "step": "split",
+                "separator": " ",
+                "take": -1
+              }
+            ]
+          },
+          {
+            "op": "copy",
+            "from": "field.recipient",
+            "to": "OBR.16.3",
+            "steps": [
+              {
+                "step": "trim"
+              },
+              {
+                "step": "split",
+                "separator": " ",
+                "take": 0
+              }
+            ]
+          },
+          {
+            "op": "datetime",
+            "from": "field.reported",
+            "to": "OBR.22",
+            "input": "M/d/yyyy",
+            "output": "yyyyMMdd"
+          },
+          {
+            "op": "constant",
+            "value": "F",
+            "to": "OBR.25"
+          },
+          {
+            "op": "constant",
+            "value": "1",
+            "to": "OBX.1"
+          },
+          {
+            "op": "constant",
+            "value": "ED",
+            "to": "OBX.2"
+          },
+          {
+            "op": "copy",
+            "from": "field.specimen_type",
+            "to": "OBX.3.1",
+            "steps": [
+              {
+                "step": "upper"
+              }
+            ]
+          },
+          {
+            "op": "copy",
+            "from": "field.specimen_type",
+            "to": "OBX.3.2"
+          },
+          {
+            "op": "constant",
+            "value": "L",
+            "to": "OBX.3.3"
+          },
+          {
+            "op": "constant",
+            "value": "AP",
+            "to": "OBX.5.2"
+          },
+          {
+            "op": "constant",
+            "value": "PDF",
+            "to": "OBX.5.3"
+          },
+          {
+            "op": "constant",
+            "value": "Base64",
+            "to": "OBX.5.4"
+          },
+          {
+            "op": "copy",
+            "from": "report.file_base64",
+            "to": "OBX.5.5",
+            "required": true
+          },
+          {
+            "op": "constant",
+            "value": "F",
+            "to": "OBX.11"
+          },
+          {
+            "op": "datetime",
+            "from": "field.reported",
+            "to": "OBX.14",
+            "input": "M/d/yyyy",
+            "output": "yyyyMMdd"
+          },
+          {
+            "op": "constant",
+            "value": "1",
+            "to": "SPM.1"
+          },
+          {
+            "op": "copy",
+            "from": "field.kit_number",
+            "to": "SPM.2"
+          },
+          {
+            "op": "datetime",
+            "from": "field.collected",
+            "to": "SPM.17",
+            "input": "M/d/yyyy HH:mm",
+            "output": "yyyyMMddHHmm"
+          },
+          {
+            "op": "datetime",
+            "from": "field.received",
+            "to": "SPM.18",
+            "input": "M/d/yyyy",
+            "output": "yyyyMMdd"
+          }
+        ]
+      },
+      "sample": {
+        "header": {
+          "MSH.3": "PACKIE",
+          "MSH.4": "LAB",
+          "MSH.5": "HIE",
+          "MSH.6": "HIE",
+          "MSH.7": "20261012120500",
+          "MSH.10": "CTRL-0001",
+          "MSH.11": "P",
+          "MSH.12": "2.5.1"
+        },
+        "input": "patient_name: TEST BABY DOE\rlast_name: DOE\rgender: Female\rrace: Other\rdob: 1/2/2026 08:05\rmother_name: JANE DOE\rmother_phone: \rmedical_record: \rkit_number: K000001\rsample_id: SYN-0001\rspecimen_type: Initial\rcollected: 1/3/2026 10:00\rreceived: 1/4/2026\rreported: 1/6/2026\rrecipient: PAT PROVIDER\rbirth_hospital_code: F0001\rphysician: Example Pediatrics\rphysician_facility_code: F0001\r",
+        "output": "MSH|^~\\&|PACKIE|LAB|HIE|HIE|20261012120500||ORU^R01^ORU_R01|CTRL-0001|P|2.5.1\rPID|1|SYN-0001|SYN-0001^^^^PI||DOE^TEST BABY||202601020805|F||2131-1^Other Race^CDCREC||||||S||SYN-0001\rNK1|1|DOE^JANE|MTH||||N\rPV1|1|N|^^^F0001|N|||^PROVIDER^PAT|^PROVIDER^PAT|||||||||||SYN-0001|||||||||||||||||||||||||20260104\rORC|RE||SYN-0001||||||||||||||||||Example Pediatrics^^^^^^^^^F0001\rOBR|1||SYN-0001|INITIAL^Initial^L|||202601031000|||||||20260104||^PROVIDER^PAT||||||20260106|||F\rOBX|1|ED|INITIAL^Initial^L||^AP^PDF^Base64^JVBERi0xLjcgc3ludGhldGljIHJlcG9ydA==||||||F|||20260106\rSPM|1|K000001|||||||||||||||202601031000|20260104\r"
+      },
+      "evidence": "The fields a health information exchange's inbound ORU specification requires, as that exchange answered them for newborn screening reports; fixture is synthetic."
     }
   ]
 }

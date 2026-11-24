@@ -1,6 +1,7 @@
 import type {
   ConfigDocument,
   EndpointConfig,
+  FileConsumption,
   SftpEndpointConfig,
   TcpListenerEndpointConfig,
 } from "../types";
@@ -102,6 +103,26 @@ function checkFilePattern(pattern: string, path: string, issues: Issues): void {
   }
 }
 
+/** The folders a read file moves to: inside the endpoint's own, and apart from each other. */
+function checkConsumption(endpoint: FileConsumption, path: string, issues: Issues): void {
+  const folders = [
+    ["processedDirectory", endpoint.processedDirectory],
+    ["filteredDirectory", endpoint.filteredDirectory],
+    ["invalidDirectory", endpoint.invalidDirectory],
+  ] as const;
+  const seen = new Set<string>();
+  for (const [field, folder] of folders) {
+    if (folder === "") continue;
+    const outside = /^([/\\]|[A-Za-z]:)/.test(folder) || folder.split(/[/\\]/).includes("..");
+    if (outside) error(issues, `${path}.${field}`, "Use a folder inside the endpoint's folder.");
+    else if (seen.has(folder)) error(issues, `${path}.${field}`, "Each folder must differ.");
+    seen.add(folder);
+  }
+  if (endpoint.onConsumed === "move" && endpoint.processedDirectory === "") {
+    error(issues, `${path}.processedDirectory`, "The processed folder is required.");
+  }
+}
+
 function validateEndpointKind(endpoint: EndpointConfig, path: string, issues: Issues): void {
   switch (endpoint.kind) {
     case "serial":
@@ -119,9 +140,11 @@ function validateEndpointKind(endpoint: EndpointConfig, path: string, issues: Is
     case "folder":
       required(issues, `${path}.path`, endpoint.path, "The folder path");
       checkFilePattern(endpoint.filePattern, `${path}.filePattern`, issues);
+      checkConsumption(endpoint, path, issues);
       return;
     case "sftp":
       validateSftp(endpoint, path, issues);
+      checkConsumption(endpoint, path, issues);
   }
 }
 
