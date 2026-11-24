@@ -2,10 +2,11 @@
 //! each complete file is one message, committed whole with the identifiers its template
 //! reads; the pipeline parses it on a blocking thread. The file is consumed right after the
 //! commit, or, with a filtered or invalid directory, once the pipeline has decided the
-//! message, into the directory of its outcome.
+//! message, into `YYYY/MM/DD` (local date of receipt) under the directory of its outcome.
 
 use std::sync::Arc;
 
+use jiff::tz::TimeZone;
 use packie_config::{Consumption, EndpointConfig, PdfReportSettings};
 use packie_core::{MessageId, MessageState, ProtocolKind, Timestamp};
 use packie_engine::pdf::PdfReader;
@@ -112,6 +113,27 @@ enum Outcome {
     Invalid,
 }
 
+impl Outcome {
+    fn directory<'a>(self, consumption: &Consumption<'a>) -> &'a str {
+        match self {
+            Self::Processed => consumption.processed,
+            Self::Filtered => consumption.filtered.unwrap_or(consumption.processed),
+            Self::Invalid => consumption.invalid.unwrap_or(consumption.processed),
+        }
+    }
+}
+
+/// `<base>/YYYY/MM/DD` for `at` in the computer's time zone.
+fn dated_directory(base: &str, at: Timestamp) -> String {
+    dated_directory_in(base, at, &TimeZone::system())
+}
+
+fn dated_directory_in(base: &str, at: Timestamp, zone: &TimeZone) -> String {
+    let base = base.trim().trim_end_matches(['/', '\\']);
+    let date = at.as_jiff().to_zoned(zone.clone()).strftime("%Y/%m/%d");
+    format!("{base}/{date}")
+}
+
 /// Commits the report, runs its pipeline and consumes the file.
 async fn take_report(
     cx: &MessageContext,
@@ -123,12 +145,16 @@ async fn take_report(
     let Some(consumption) = endpoint.consumption() else {
         return Ok(());
     };
+    let received_at = Timestamp::now();
     let committed = if unit.too_large.is_some() {
-        commit_too_large(cx, unit).await
+        commit_too_large(cx, unit, received_at).await
     } else {
         let identifiers = read_identifiers(reader, unit).await;
         cx.store
-            .commit_received(receipt(cx, unit, identifiers), unit.bytes.clone())
+            .commit_received(
+                receipt(cx, unit, identifiers, received_at),
+                unit.bytes.clone(),
+            )
             .await
             .map(Some)
     };
@@ -142,14 +168,16 @@ async fn take_report(
     let committed = committed?;
     cx.shared.session_stable();
     if !consumption.by_outcome() {
-        consume(cx, source, unit, &consumption, Outcome::Processed).await;
+        let target = dated_directory(Outcome::Processed.directory(&consumption), received_at);
+        consume(cx, source, unit, &target).await;
     }
     let outcome = match committed {
         None => Outcome::Invalid,
         Some(receipt) => after_commit(cx, &receipt, &unit.bytes).await,
     };
     if consumption.by_outcome() {
-        consume(cx, source, unit, &consumption, outcome).await;
+        let target = dated_directory(outcome.directory(&consumption), received_at);
+        consume(cx, source, unit, &target).await;
     }
     Ok(())
 }
@@ -158,10 +186,11 @@ async fn take_report(
 async fn commit_too_large(
     cx: &MessageContext,
     unit: &FileUnit,
+    received_at: Timestamp,
 ) -> Result<Option<ReceiptOutcome>, StoreError> {
     let message = cx
         .store
-        .begin_transfer(receipt(cx, unit, identifiers(&[])), Vec::new())
+        .begin_transfer(receipt(cx, unit, identifiers(&[]), received_at), Vec::new())
         .await?;
     cx.store.abort_transfer(message, "file_too_large").await?;
     Ok(None)
@@ -211,25 +240,16 @@ async fn outcome_of(cx: &MessageContext, original: MessageId) -> Outcome {
     }
 }
 
-/// Moves (or deletes, or leaves) the file per `on_consumed`; a move goes to the outcome's
-/// directory. A file that cannot be consumed is logged; reading it again records a duplicate.
+/// Moves (or deletes, or leaves) the file per `on_consumed`; a move goes to `directory`
+/// (`<outcome>/YYYY/MM/DD`). A file that cannot be consumed is logged; reading it again
+/// records a duplicate.
 async fn consume(
     cx: &MessageContext,
     source: &mut dyn FileSource,
     unit: &FileUnit,
-    consumption: &Consumption<'_>,
-    outcome: Outcome,
+    directory: &str,
 ) {
-    let directory = match outcome {
-        Outcome::Processed => None,
-        Outcome::Filtered => consumption.filtered,
-        Outcome::Invalid => consumption.invalid,
-    };
-    let result = match directory {
-        Some(directory) => source.consumed_into(unit, directory).await,
-        None => source.consumed(unit).await,
-    };
-    if let Err(error) = result {
+    if let Err(error) = source.consumed_into(unit, directory).await {
         tracing::warn!(
             event = "file.consume_failed",
             operation = %error.operation,
@@ -241,7 +261,12 @@ async fn consume(
     }
 }
 
-fn receipt(cx: &MessageContext, unit: &FileUnit, mut identifiers: Identifiers) -> Receipt {
+fn receipt(
+    cx: &MessageContext,
+    unit: &FileUnit,
+    mut identifiers: Identifiers,
+    received_at: Timestamp,
+) -> Receipt {
     identifiers.source_identity = Some(unit.name.clone());
     Receipt {
         channel_id: cx.shared.id,
@@ -251,7 +276,7 @@ fn receipt(cx: &MessageContext, unit: &FileUnit, mut identifiers: Identifiers) -
         protocol: ProtocolKind::PdfReport,
         // When the engine takes the file, not the file's modified time: an old file dropped
         // today is received today (and retention counts from today).
-        received_at: Timestamp::now(),
+        received_at,
         config_version: cx.shared.config_version(),
         duplicate_detection: cx.channel.source.duplicate_detection,
         identifiers,
@@ -266,5 +291,44 @@ fn receipt(cx: &MessageContext, unit: &FileUnit, mut identifiers: Identifiers) -
             first_row: 0,
             last_row: 0,
         }),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use packie_config::OnConsumed;
+
+    #[test]
+    fn dated_directories_use_the_local_calendar_date_with_zero_padded_parts() {
+        let chicago = TimeZone::get("America/Chicago").unwrap();
+        let bucharest = TimeZone::get("Europe/Bucharest").unwrap();
+        // 2026-03-05 23:30 UTC: still March 5 in Chicago (-06:00), already March 6 in Bucharest (+02:00).
+        let at = Timestamp::parse("2026-03-05T23:30:00Z").unwrap();
+        assert_eq!(
+            dated_directory_in("processed", at, &chicago),
+            "processed/2026/03/05"
+        );
+        assert_eq!(
+            dated_directory_in("processed/", at, &bucharest),
+            "processed/2026/03/06"
+        );
+        assert_eq!(
+            dated_directory_in("errors/pdf\\", at, &bucharest),
+            "errors/pdf/2026/03/06"
+        );
+    }
+
+    #[test]
+    fn unset_outcome_directories_fall_back_to_processed() {
+        let consumption = Consumption {
+            on_consumed: OnConsumed::Move,
+            processed: "processed",
+            filtered: Some("filtered"),
+            invalid: None,
+        };
+        assert_eq!(Outcome::Processed.directory(&consumption), "processed");
+        assert_eq!(Outcome::Filtered.directory(&consumption), "filtered");
+        assert_eq!(Outcome::Invalid.directory(&consumption), "processed");
     }
 }

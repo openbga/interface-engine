@@ -177,8 +177,8 @@ OS timing and log a warning; see the [TCP settings specification](../spec/config
 | `stable_seconds` | Both | `2` | Integer, 0–3600; unchanged size and modification time before reading. |
 | `exclusive_open_check` | `folder` | `true` | Boolean; also require exclusive read access before reading. |
 | `on_consumed` | Both | `move` | `move`, `delete`, `leave`; after durable receipt. |
-| `processed_directory` | Both | `processed` | Relative to source directory; created when needed. |
-| `filtered_directory` | Both | `null` | `pdf_report` sources with `on_consumed=move`: where a filtered report goes; `null` uses `processed_directory`. Relative, created when needed, different from the other two. |
+| `processed_directory` | Both | `processed` | Relative to source directory; created when needed (`pdf_report` sources add `YYYY/MM/DD` by local receipt date). |
+| `filtered_directory` | Both | `null` | `pdf_report` sources with `on_consumed=move`: where a filtered report goes (under `YYYY/MM/DD`); `null` uses `processed_directory`. Relative, created when needed, different from the other two. |
 | `invalid_directory` | Both | `null` | As `filtered_directory`, for a report that does not parse or is too large. With either set, a report is moved once it is filtered, invalid or routed. |
 | `write_mode` | Both | `atomic_rename` | `atomic_rename` or `direct`. |
 
