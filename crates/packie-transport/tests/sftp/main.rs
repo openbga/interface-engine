@@ -21,7 +21,7 @@ use russh::keys::ssh_key::LineEnding;
 use serde_json::json;
 use tokio::net::TcpListener;
 
-use server::{PASSWORD, Server, fingerprint, key, transports};
+use server::{PASSWORD, Server, fingerprint, key, rsa_key, transports};
 
 fn read(path: impl AsRef<Path>) -> Vec<u8> {
     fs::read(path).unwrap()
@@ -231,6 +231,30 @@ async fn key_authentication_uses_the_secret_store() {
     let error = write_error(&*sink, "k.csv", b"x", OnExists::Suffix).await;
     assert!(error.persistent);
     assert_eq!(error.cause, "authentication rejected by the server");
+}
+
+#[tokio::test]
+async fn rsa_host_and_user_keys_sign_in() {
+    // A server identified only by a 1024-bit RSA key, as some still are, and an RSA user key.
+    let client = rsa_key(2048);
+    let server = Server::start_with_host_key(&client, rsa_key(1024)).await;
+    let report = probe(&server, &json!({})).await;
+    assert!(report.ok, "{report:?}");
+
+    let pem = client.to_openssh(LineEnding::LF).unwrap();
+    let secrets = MapSecrets::new(HashMap::from([(
+        "sftp-key".to_owned(),
+        pem.as_str().to_owned(),
+    )]));
+    let auth = json!({"auth": {"method": "key", "private_key": {"secret": "sftp-key"}, "passphrase": null}});
+    let sink = SystemTransports::new(Arc::new(secrets))
+        .file_sink(&server.endpoint("/outbound", &auth))
+        .unwrap();
+    assert_eq!(
+        write(&*sink, "r.csv", b"rsa", OnExists::Fail).await,
+        "r.csv"
+    );
+    assert_eq!(read(server.dir("outbound").join("r.csv")), b"rsa");
 }
 
 #[tokio::test]

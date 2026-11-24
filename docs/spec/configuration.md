@@ -204,8 +204,8 @@ one directory; use two endpoints for separate in and out directories.
 | `host` | sftp | string | none | As `tcp_client.host`. |
 | `port` | sftp | integer | `22` | 1–65535. |
 | `username` | sftp | string | none | 1–255 characters. |
-| `auth` | sftp | object | none | `{"method":"password","password":<secret>}` or `{"method":"key","private_key":<secret>,"passphrase":<secret or null>}`. Secrets by reference only. |
-| `host_key_fingerprint` | sftp | string | none | Required server-key pin, normally `SHA256:` followed by base64. Configuration validation checks only the `SHA256:` prefix and a minimum total length of 10 bytes. A mismatch with the server's fingerprint puts the endpoint in `error` (`host_key_mismatch`). |
+| `auth` | sftp | object | none | `{"method":"password","password":<secret>}` or `{"method":"key","private_key":<secret>,"passphrase":<secret or null>}`. Secrets by reference only. A private key is Ed25519, ECDSA or RSA. |
+| `host_key_fingerprint` | sftp | string | none | Required server-key pin, normally `SHA256:` followed by base64. The host key may be Ed25519, ECDSA or RSA (1024 bits or more). Configuration validation checks only the `SHA256:` prefix and a minimum total length of 10 bytes. A mismatch with the server's fingerprint puts the endpoint in `error` (`host_key_mismatch`). |
 | `remote_directory` | sftp | string | none | Absolute remote path. |
 | `connect_timeout_ms` | sftp | integer | `10000` | 1–120,000. |
 | `operation_timeout_ms` | sftp | integer | `30000` | 1–600,000. One list, read or write operation. |

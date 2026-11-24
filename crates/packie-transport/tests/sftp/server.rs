@@ -11,7 +11,7 @@ use std::time::Duration;
 
 use packie_config::EndpointConfig;
 use packie_transport::{FileSink, FileSource, MapSecrets, SystemTransports, Transports};
-use russh::keys::ssh_key::private::Ed25519Keypair;
+use russh::keys::ssh_key::private::{Ed25519Keypair, RsaKeypair};
 use russh::keys::{HashAlg, PrivateKey, PublicKey};
 use russh::server::{Auth, ChannelOpenHandle, Msg, Session, VerifiedPublicKey};
 use russh::{Channel, ChannelId};
@@ -32,6 +32,11 @@ pub fn key(seed: u8) -> PrivateKey {
     PrivateKey::from(Ed25519Keypair::from_seed(&[seed; 32]))
 }
 
+/// A random RSA key of `bits`, for servers and users that still use RSA.
+pub fn rsa_key(bits: usize) -> PrivateKey {
+    PrivateKey::from(RsaKeypair::random(&mut rand::rng(), bits).unwrap())
+}
+
 pub fn fingerprint(key: &PrivateKey) -> String {
     key.public_key().fingerprint(HashAlg::Sha256).to_string()
 }
@@ -47,10 +52,14 @@ impl Server {
     /// Starts a server with `/inbound` and `/outbound`, accepting the synthetic password
     /// and the public key of `client`.
     pub async fn start(client: &PrivateKey) -> Self {
+        Self::start_with_host_key(client, key(7)).await
+    }
+
+    /// As [`Server::start`], identified by `host_key`.
+    pub async fn start_with_host_key(client: &PrivateKey, host_key: PrivateKey) -> Self {
         let files = TempDir::new().unwrap();
         fs::create_dir(files.path().join("inbound")).unwrap();
         fs::create_dir(files.path().join("outbound")).unwrap();
-        let host_key = key(7);
         let fingerprint = fingerprint(&host_key);
         let config = Arc::new(russh::server::Config {
             keys: vec![host_key],

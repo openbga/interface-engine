@@ -6,7 +6,7 @@
 What changed in OpenBGA Interface Engine, grouped by release with unreleased changes on
 top, then by impact. Types follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Unreleased (2026-11-12 to 2026-11-23)
+## Unreleased (2026-11-12 to 2026-11-24)
 
 ### High impact
 
@@ -172,6 +172,18 @@ top, then by impact. Types follow [Keep a Changelog](https://keepachangelog.com/
   outputs can contain PHI.
 
 ### Medium impact
+
+- **Fixed:** SFTP endpoints connect to servers with RSA host keys (2026-11-24)
+
+  SFTP endpoints now connect to servers that identify themselves with an RSA host key, including
+  older 1024-bit keys, and sign in with RSA private keys. Before, such a server failed at connect
+  with "Wrong server signature". Pin the server's `SHA256:` fingerprint as for any other key.
+
+  Technical notes:
+
+  The engine's SSH library is built with RSA support: `russh` 0.65.1 → 0.65.4 with its `rsa`
+  feature, which adds `rsa` 0.10.0, `pkcs1` 0.8.0 and `crypto-primes` 0.7.2 (MIT or Apache-2.0)
+  and takes `ssh-key` 0.7.0-rc.12. `rsa` 0.10.0 is the release that fixes RUSTSEC-2023-0071.
 
 - **Fixed:** Files are received when the engine takes them (2026-11-20)
 

@@ -163,9 +163,9 @@ OS timing and log a warning; see the [TCP settings specification](../spec/config
 | `username` | `sftp` | Required | String, 1–255 characters. |
 | `auth.method` | `sftp` | Required | `password` or `key`. |
 | `auth.password` | `sftp` | Required for password auth | Secret reference. |
-| `auth.private_key` | `sftp` | Required for key auth | Secret reference. |
+| `auth.private_key` | `sftp` | Required for key auth | Secret reference to an Ed25519, ECDSA or RSA private key. |
 | `auth.passphrase` | `sftp` | Optional for key auth | Secret reference or `null`. |
-| `host_key_fingerprint` | `sftp` | Required | `SHA256:` plus base64; pinned server key. |
+| `host_key_fingerprint` | `sftp` | Required | `SHA256:` plus base64; pinned server key (Ed25519, ECDSA or RSA). |
 | `remote_directory` | `sftp` | Required | Absolute remote path. |
 | `connect_timeout_ms` | `sftp` | `10000` | Integer, 1–120,000. |
 | `operation_timeout_ms` | `sftp` | `30000` | Integer, 1–600,000 per list/read/write operation. |
