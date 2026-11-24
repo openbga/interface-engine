@@ -1,9 +1,9 @@
-//! HL7 v2 settings (`docs/spec/configuration.md` §7.3).
+//! HL7 v2 settings (`docs/spec/configuration.md` §7.3, §7.8).
 
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use super::Charset;
+use super::{Charset, OnExists};
 use crate::defaults::{mib_1, ms_30000, yes};
 
 /// HL7 acknowledgement mode.
@@ -102,4 +102,41 @@ fn ack_types() -> Vec<String> {
 
 fn hl7_version() -> String {
     "2.5.1".to_owned()
+}
+
+/// HL7 file settings (§7.8): one HL7 v2 message per file on a folder or SFTP endpoint.
+/// Destination only; the header fields are those of [`Hl7Settings`]. Files are UTF-8.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(deny_unknown_fields)]
+pub struct Hl7FileSettings {
+    /// MSH-12 of generated messages, `2.x` or `2.x.y`. Default `2.5.1`.
+    #[serde(default = "hl7_version")]
+    pub version: String,
+    /// MSH-3 of generated messages; ≤ 180 characters.
+    #[serde(default)]
+    pub sending_application: String,
+    /// MSH-4; ≤ 180 characters.
+    #[serde(default)]
+    pub sending_facility: String,
+    /// MSH-5; ≤ 180 characters.
+    #[serde(default)]
+    pub receiving_application: String,
+    /// MSH-6; ≤ 180 characters.
+    #[serde(default)]
+    pub receiving_facility: String,
+    /// Default `P`.
+    #[serde(default)]
+    pub processing_id: ProcessingId,
+    /// A larger mapped message is not written (`transform_error`); 1024–67108864. Default
+    /// 1 MiB.
+    #[serde(default = "mib_1")]
+    pub max_message_bytes: u64,
+    /// Required: template with `{message_id}`, `{control_id}`, `{sample_id}`, `{date}`,
+    /// `{time}`, `{seq}`; no path separators.
+    #[serde(default)]
+    pub file_name: String,
+    /// `suffix`, `overwrite` or `fail`; one file holds one message, so never `append`.
+    /// Default `suffix`.
+    #[serde(default)]
+    pub on_exists: OnExists,
 }

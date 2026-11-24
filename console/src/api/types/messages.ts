@@ -191,6 +191,8 @@ export interface MessageDetail {
   abortReason: string | null;
   /** Why it was filtered or is invalid (`source_filter`, `parse_error`). */
   reasonCode: string | null;
+  /** For an invalid PDF report: what failed, in template terms (never report text). */
+  reasonDetail: string | null;
   /** The earlier message this one duplicates. */
   duplicateOf: string | null;
   /** The earlier message with the same identity and other content. */

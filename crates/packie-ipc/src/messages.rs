@@ -284,6 +284,9 @@ pub struct MessageRecord {
     pub abort_reason: Option<String>,
     /// Why it was filtered or is invalid (`source_filter`, `parse_error`, ...).
     pub reason_code: Option<String>,
+    /// For an invalid PDF report: what failed, in template terms, never report text.
+    #[serde(default)]
+    pub reason_detail: Option<String>,
     /// The earlier message this one duplicates.
     pub duplicate_of: Option<MessageId>,
     /// The earlier message with the same identity and other content.

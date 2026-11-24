@@ -72,7 +72,16 @@ impl FileSource for SftpSource {
 
     fn consumed(&mut self, unit: &FileUnit) -> BoxFuture<'_, Result<(), LinkError>> {
         let name = unit.name.clone();
-        Box::pin(async move { self.finish(&name).await })
+        let directory = self.settings.processed_directory.clone();
+        Box::pin(async move { self.finish(&name, &directory).await })
+    }
+
+    fn consumed_into<'a>(
+        &'a mut self,
+        unit: &'a FileUnit,
+        directory: &'a str,
+    ) -> BoxFuture<'a, Result<(), LinkError>> {
+        Box::pin(self.finish(&unit.name, directory))
     }
 
     fn set_max_file_bytes(&mut self, max_bytes: u64) {
@@ -162,7 +171,8 @@ impl SftpSource {
         Ok(files)
     }
 
-    /// Files that qualify are listed; sub-directories (other than the processed one) are
+    /// Files that qualify are listed; sub-directories (other than the processed, filtered and
+    /// invalid ones) are
     /// queued when `recursive`. Links and other special entries are ignored.
     fn sort_entry(
         &self,
@@ -175,7 +185,16 @@ impl SftpSource {
         let settings = &self.settings;
         let path = join_relative(directory, name);
         if metadata.is_dir() {
-            if settings.recursive && path != normalized_relative(&settings.processed_directory) {
+            let consumption = settings.consumption();
+            let skipped = [
+                Some(consumption.processed),
+                consumption.filtered,
+                consumption.invalid,
+            ]
+            .into_iter()
+            .flatten()
+            .any(|directory| path == normalized_relative(directory));
+            if settings.recursive && !skipped {
                 directories.push(path);
             }
         } else if metadata.is_regular()
@@ -287,7 +306,7 @@ impl SftpSource {
 
     /// `consumed`: move, delete or leave the file. A failure leaves it eligible to be
     /// returned again.
-    async fn finish(&mut self, name: &str) -> Result<(), LinkError> {
+    async fn finish(&mut self, name: &str, directory: &str) -> Result<(), LinkError> {
         let version = self.outstanding.remove(name);
         if self.settings.on_consumed == OnConsumed::Leave {
             if let Some(version) = version {
@@ -296,7 +315,7 @@ impl SftpSource {
             return Ok(());
         }
         let session = Session::connect(&self.settings, &self.secrets).await?;
-        let done = self.dispose(&session, name).await;
+        let done = self.dispose(&session, name, directory).await;
         session.close().await;
         done?;
         tracing::debug!(
@@ -307,16 +326,20 @@ impl SftpSource {
         Ok(())
     }
 
-    async fn dispose(&self, session: &Session, name: &str) -> Result<(), LinkError> {
+    async fn dispose(
+        &self,
+        session: &Session,
+        name: &str,
+        directory: &str,
+    ) -> Result<(), LinkError> {
         let root = remote_root(&self.settings);
         let from = absolute(root, name);
         let failure = |e: &SftpError| sftp_failure(Operation::Write, e);
         if self.settings.on_consumed == OnConsumed::Delete {
             return session.remove(&from).await.map_err(|e| failure(&e));
         }
-        let (directory, file) = split_relative(name);
-        let processed = normalized_relative(&self.settings.processed_directory);
-        let target_directory = join_relative(&processed, directory);
+        let (subdirectory, file) = split_relative(name);
+        let target_directory = join_relative(&normalized_relative(directory), subdirectory);
         session
             .make_dirs(root, &target_directory)
             .await
@@ -339,7 +362,7 @@ async fn free_name(session: &Session, directory: &str, file: &str) -> Result<Str
     }
     Err(LinkError::new(
         Operation::Write,
-        "no free name in the processed directory",
+        "no free name in the target directory",
     ))
 }
 
@@ -375,8 +398,8 @@ mod tests {
             source
                 .outstanding
                 .extend(names.map(|p| (p.to_owned(), version)));
-            source.finish("a.csv").await.unwrap();
-            source.finish("b.csv").await.unwrap();
+            source.finish("a.csv", "processed").await.unwrap();
+            source.finish("b.csv", "processed").await.unwrap();
             assert!(names.iter().all(|path| source.excluded(path, version)));
             let older = Version { size: 0, mtime: 1 };
             assert!(names.iter().all(|path| !source.excluded(path, older)));

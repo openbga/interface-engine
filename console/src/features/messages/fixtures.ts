@@ -197,6 +197,7 @@ export function detail(overrides: Partial<MessageDetail> = {}): MessageDetail {
     respondedAt: "2026-11-06T11:30:00Z",
     abortReason: null,
     reasonCode: null,
+    reasonDetail: null,
     duplicateOf: null,
     revisionOf: null,
     revisedBy: null,

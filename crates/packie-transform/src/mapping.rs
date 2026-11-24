@@ -353,7 +353,7 @@ impl<'a> Compiler<'a> {
     /// The `from` path of `object` and its optional `steps`.
     pub(crate) fn source(&mut self, object: &Obj<'_>, ctx: Ctx) -> Option<Source> {
         let path = self.path(object, "from", false, ctx);
-        let steps = compile_steps(object, &mut self.problems);
+        let steps = compile_steps(object, self.source, &mut self.problems);
         Some(Source {
             path: path?,
             steps: steps?,

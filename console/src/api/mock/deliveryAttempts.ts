@@ -12,6 +12,7 @@ import { iso } from "./util";
 export function topAckLevel(destination: DestinationInfo): AckLevel {
   switch (destination.protocol) {
     case "delimited_file":
+    case "hl7_file":
       return "handed_off";
     case "astm":
       return "received";
@@ -27,7 +28,9 @@ export function topAckLevel(destination: DestinationInfo): AckLevel {
 /** The acknowledgement code a destination answers with when it accepts, if its protocol has one. */
 function acceptCode(destination: DestinationInfo): string | null {
   if (destination.protocol === "hl7_mllp") return destination.ackMode === "none" ? null : "AA";
-  return destination.protocol === "delimited_file" ? null : "ACK";
+  return destination.protocol === "delimited_file" || destination.protocol === "hl7_file"
+    ? null
+    : "ACK";
 }
 
 export type Outcome = "failed" | "rejected" | "timed_out" | "outcome_unknown";

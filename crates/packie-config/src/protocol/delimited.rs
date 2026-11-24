@@ -45,6 +45,20 @@ pub enum ColumnType {
     Datetime,
 }
 
+impl ColumnType {
+    /// The type's name as written in the document (`datetime`).
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::String => "string",
+            Self::Integer => "integer",
+            Self::Decimal => "decimal",
+            Self::Date => "date",
+            Self::Datetime => "datetime",
+        }
+    }
+}
+
 /// One delimited column.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(deny_unknown_fields)]

@@ -5,7 +5,7 @@
  * Reading fills the specification's defaults, so a sparse document reads like a complete one.
  * Writing starts from the original object and overwrites only the fields whose console value
  * differs from what reading the original gave; everything the console does not model
- * (timeouts, keep-alive tuning, virtual links, `tags`, directories, ...) survives. A new
+ * (timeouts, keep-alive tuning, virtual links, `tags`, write modes, ...) survives. A new
  * endpoint is written sparse: required fields, and modeled fields that differ from the default.
  */
 
@@ -13,6 +13,7 @@ import type { SecretRef } from "@/ipc/generated";
 import { clone } from "@/lib/clone";
 import type {
   EndpointConfig,
+  FileConsumption,
   FolderEndpointConfig,
   SerialEndpointConfig,
   SftpEndpointConfig,
@@ -72,6 +73,17 @@ const tcpListenerFrom = (base: Base, t: WireTcpListenerSettings): TcpListenerEnd
   keepalive: t.keep_alive ?? true,
 });
 
+/** The consumption settings both file kinds share, defaults filled in. */
+const consumptionFrom = (t: WireConsumption): FileConsumption => ({
+  onConsumed: t.on_consumed ?? "move",
+  processedDirectory: t.processed_directory ?? "processed",
+  filteredDirectory: t.filtered_directory ?? "",
+  invalidDirectory: t.invalid_directory ?? "",
+});
+
+/** What a file endpoint does when its document says nothing: move files to `processed`. */
+export const DEFAULT_CONSUMPTION: FileConsumption = consumptionFrom({});
+
 const folderFrom = (base: Base, t: WireFolderSettings): FolderEndpointConfig => ({
   ...base,
   kind: "folder",
@@ -79,6 +91,7 @@ const folderFrom = (base: Base, t: WireFolderSettings): FolderEndpointConfig => 
   mode: t.mode ?? "watch",
   pollIntervalSec: t.poll_interval_seconds ?? 30,
   filePattern: t.file_pattern ?? "*",
+  ...consumptionFrom(t),
 });
 
 const sftpFrom = (base: Base, t: WireSftpSettings): SftpEndpointConfig => ({
@@ -94,6 +107,7 @@ const sftpFrom = (base: Base, t: WireSftpSettings): SftpEndpointConfig => ({
   remotePath: t.remote_directory,
   pollIntervalSec: t.poll_interval_seconds ?? 60,
   filePattern: t.file_pattern ?? "*",
+  ...consumptionFrom(t),
 });
 
 export function endpointFromWire(raw: WireEndpoint): EndpointConfig {
@@ -174,6 +188,29 @@ const TCP_LISTENER: Patch<TcpListenerEndpointConfig, WireTcpListenerSettings> = 
   },
 };
 
+/** An optional folder: empty is written as null (the processed folder). */
+const orNull = (directory: string) => (directory === "" ? null : directory);
+
+type WireConsumption = Pick<
+  WireFolderSettings,
+  "on_consumed" | "processed_directory" | "filtered_directory" | "invalid_directory"
+>;
+
+const CONSUMPTION: Patch<FileConsumption, WireConsumption> = {
+  onConsumed: (r, u) => {
+    r.on_consumed = u.onConsumed;
+  },
+  processedDirectory: (r, u) => {
+    r.processed_directory = u.processedDirectory;
+  },
+  filteredDirectory: (r, u) => {
+    r.filtered_directory = orNull(u.filteredDirectory);
+  },
+  invalidDirectory: (r, u) => {
+    r.invalid_directory = orNull(u.invalidDirectory);
+  },
+};
+
 const FOLDER: Patch<FolderEndpointConfig, WireFolderSettings> = {
   path: (r, u) => {
     r.path = u.path;
@@ -187,6 +224,7 @@ const FOLDER: Patch<FolderEndpointConfig, WireFolderSettings> = {
   filePattern: (r, u) => {
     r.file_pattern = u.filePattern;
   },
+  ...CONSUMPTION,
 };
 
 function setAuth(r: WireSftpSettings, u: SftpEndpointConfig): void {
@@ -227,6 +265,14 @@ const SFTP: Patch<SftpEndpointConfig, WireSftpSettings> = {
   filePattern: (r, u) => {
     r.file_pattern = u.filePattern;
   },
+  ...CONSUMPTION,
+};
+
+const CONSUMED_DEFAULTS = {
+  on_consumed: "move",
+  processed_directory: "processed",
+  filtered_directory: null,
+  invalid_directory: null,
 };
 
 /** What a new endpoint leaves out because the engine assumes it. */
@@ -239,8 +285,8 @@ const DEFAULTS: Record<EndpointConfig["kind"], Record<string, unknown>> = {
     idle_timeout_seconds: 0,
     keep_alive: true,
   },
-  folder: { mode: "watch", poll_interval_seconds: 30, file_pattern: "*" },
-  sftp: { port: 22, poll_interval_seconds: 60, file_pattern: "*" },
+  folder: { mode: "watch", poll_interval_seconds: 30, file_pattern: "*", ...CONSUMED_DEFAULTS },
+  sftp: { port: 22, poll_interval_seconds: 60, file_pattern: "*", ...CONSUMED_DEFAULTS },
 };
 
 function patchSettings(

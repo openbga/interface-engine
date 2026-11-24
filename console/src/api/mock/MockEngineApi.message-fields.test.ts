@@ -55,7 +55,7 @@ describe("parsed fields", () => {
       expect(await fieldsOf(api, row?.id ?? "")).toEqual({
         fields: [],
         truncated: false,
-        unavailable: "Fields are listed for HL7 and ASTM messages.",
+        unavailable: "Fields are listed for HL7, ASTM and PDF report messages.",
       });
     }
     const invalid = rows.find((r) => r.state === "invalid" && r.protocol === "hl7_mllp");

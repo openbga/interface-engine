@@ -52,6 +52,20 @@ behavior.
 - Run the unverified platform checks in the table above.
 - Package the console for Linux.
 
+### In progress
+
+- PDF reports to HL7 (`pdf_report` source, outcome directories; PRO-03, PRO-07), specified in
+  [pdf-reports.md](docs/spec/pdf-reports.md). Built: the reader (`packie-pdf`), the PDF model,
+  `strip_suffix` and unpadded date tokens in mappings, the configuration and its validation,
+  the source with outcome directories and `reason_detail`, the newborn screening template and
+  mapping presets, the template editor in the console, and the test tool (`test_pdf_report`,
+  `packie pdf test`, **Test with a PDF…**, **Test against the current template**), the
+  message views (extracted text, fields, export with bodies), and the `hl7_file` destination
+  (one HL7 message per file on a folder or SFTP endpoint). Not built: the simulator scenarios
+  of acceptance E-08 to E-14. The HL7 goes to a health information exchange, first in its
+  test environment; its connection details (SFTP folder or MLLP) are pending, as are the
+  access details of the folder the reports are published in and the panel coding.
+
 ### Known limitations
 
 - Instrument presets are built from published interface documentation and synthetic tests;

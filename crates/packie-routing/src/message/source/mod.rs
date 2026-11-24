@@ -19,7 +19,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt, ReadHalf, WriteHalf};
 use tokio::time::Instant;
 
 use crate::message::store::{Identifiers, Receipt, ReceiptOutcome, StoreError};
-use crate::message::{MessageContext, TapPoint, astm, au, drain_deadline, files};
+use crate::message::{MessageContext, TapPoint, astm, au, drain_deadline, files, pdf};
 use crate::retry::{Backoff, describe_delay};
 use crate::status::{MessageCounters, Phase, Role};
 use crate::stop::{StopRx, sleep_unless_stopped, stopped};
@@ -45,9 +45,16 @@ pub(crate) async fn run_source(cx: Arc<MessageContext>, mut stop: StopRx) {
     let Some(endpoint) = cx.config.endpoint(cx.channel.source.endpoint).cloned() else {
         return;
     };
-    if let ProtocolSettings::Delimited(settings) = &cx.channel.source.protocol {
-        let settings = settings.clone();
-        return files::run_file_source(cx, endpoint, settings, stop).await;
+    match &cx.channel.source.protocol {
+        ProtocolSettings::Delimited(settings) => {
+            let settings = settings.clone();
+            return files::run_file_source(cx, endpoint, settings, stop).await;
+        }
+        ProtocolSettings::PdfReport(settings) => {
+            let settings = settings.clone();
+            return pdf::run_pdf_source(cx, endpoint, settings, stop).await;
+        }
+        _ => {}
     }
     let opener = cx.transports.opener(&endpoint, cx.shared.id);
     let backoff = Backoff::new(&cx.channel.retry);
@@ -174,8 +181,12 @@ async fn session(cx: &MessageContext, link: Link, stop: &mut StopRx) -> End {
                 .framed(au::SourceDriver::new(driver, instrument), stop)
                 .await
         }
-        // Delimited sources read files (`files`); raw is refused by validation.
-        ProtocolSettings::Delimited(_) | ProtocolSettings::Raw => {
+        // File protocols read files (`files`, `pdf`); raw and hl7_file are refused by
+        // validation.
+        ProtocolSettings::Delimited(_)
+        | ProtocolSettings::Hl7File(_)
+        | ProtocolSettings::PdfReport(_)
+        | ProtocolSettings::Raw => {
             unsupported(cx, "the source protocol does not run over a stream", stop).await
         }
     }
@@ -218,7 +229,10 @@ fn response_write_limit(protocol: &ProtocolSettings) -> Duration {
         ProtocolSettings::Hl7(settings) => settings.frame_timeout_ms,
         ProtocolSettings::Astm(settings) => settings.receive_timeout_ms,
         ProtocolSettings::Au(settings) => settings.frame_timeout_ms,
-        ProtocolSettings::Delimited(_) | ProtocolSettings::Raw => 30_000,
+        ProtocolSettings::Delimited(_)
+        | ProtocolSettings::Hl7File(_)
+        | ProtocolSettings::PdfReport(_)
+        | ProtocolSettings::Raw => 30_000,
     };
     Duration::from_millis(u64::from(ms.max(1)))
 }

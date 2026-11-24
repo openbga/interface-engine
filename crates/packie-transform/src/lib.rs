@@ -16,9 +16,11 @@
 //! | [`AstmModel`] | `packie_astm::Record`s | yes | [`AstmModel::parse`], [`AstmModel::from_records`], [`AstmModel::new`] |
 //! | [`AuModel`] | `packie_au::SampleResults` | no | [`AuModel::from_results`] |
 //! | [`RecordModel`] | rows of named columns | yes | [`RecordModel::from_rows`], [`RecordModel::new`] |
+//! | [`PdfModel`] | a PDF report's template fields and file | no | [`PdfModel::new`] |
 //!
-//! [`RecordModel`] stands on its own: the delimited-file codec (`packie-files`) hands its
-//! rows over as `(column, text)` pairs, so this crate does not depend on it.
+//! [`RecordModel`] and [`PdfModel`] stand on their own: the delimited-file codec
+//! (`packie-files`) and the PDF reader (`packie-pdf`) hand their values over as
+//! `(name, text)` pairs, so this crate depends on neither.
 //!
 //! # Path syntax
 //!
@@ -33,6 +35,7 @@
 //! | ASTM | `R[occ].field[rep].component` | `R.4`, `R[2].3.4`, `O.3`, `P.3` |
 //! | AU | `name` or `test[occ].name` | `sample_id`, `test[0].value` |
 //! | Delimited | `col[occ].name` | `col.sample_id`, `col[1].result` |
+//! | PDF report | `field.name` or `report.name` | `field.dob`, `report.file_base64` |
 //!
 //! * **HL7.** Segment names are three characters. `MSH` has one occurrence and its
 //!   fields are numbered as in the standard (`MSH.1` is the field separator, `MSH.2` the
@@ -54,6 +57,10 @@
 //!   trimmed. AU messages are read-only; no mapping can target them.
 //! * **Delimited.** `col.<name>` is a column of the first row; a grouped message has
 //!   several rows, `col[1].<name>` and `for_each` over `col`.
+//! * **PDF report.** `field.<name>` is a template field (empty when the report has none),
+//!   `report.pages` the page count and `report.file_base64` the original file in Base64, for
+//!   embedding it (an HL7 `ED` value). PDF reports are read-only and have no records to loop
+//!   over. [`ValueType`] checks a field's configured type when a report is parsed.
 //! * **Inside `for_each`** a path may begin with `$.` and omit the record: `$.3.1` in an
 //!   HL7 or ASTM loop, `$.value` in an AU loop, `$.sample_id` in a delimited loop. In
 //!   `from` and in conditions it addresses the current input occurrence, in `to` the
@@ -73,13 +80,14 @@
 //!
 //! [`Mapping`] implements §8.2: ordered rules `copy`, `constant`, `lookup` (code tables
 //! with `error`, `keep`, `default`, `skip` on a miss; optional `ignore_case`), `concat`,
-//! `datetime` (format tokens `yyyy yy MM dd HH mm ss`, IANA time zones), `calculate`
+//! `datetime` (format tokens `yyyy yy MM M dd d HH H mm ss`, IANA time zones), `calculate`
 //! (exact decimal formulas over fields and constants, one final rounding, comparators such
 //! as `<5` carried truthfully, HL7 structured numerics), `when`, `for_each` (creating new
 //! occurrences, updating the target's copy of each, or writing the repetitions of one
 //! field), `append` (one record added only
 //! when every rule in it writes, for calculated results) and `sequence`. Every `from` may be
-//! followed by text `steps` (trim, strip leading characters, split, slice, replace, case).
+//! followed by text `steps` (trim, strip leading characters, strip another field's text from
+//! the end, split, slice, replace, case).
 //! No floating point is used anywhere. A mapping runs over a source [`Model`] into a target
 //! [`Model`] that the caller supplies, and stops at the first failing rule with a
 //! [`TransformError`] that names the rule, its path and the reason, never a value.
@@ -98,7 +106,7 @@
 //!    [`Mapping::compile`] (source schema, destination schema). Report every [`Problem`]
 //!    as `filter_invalid` or `mapping_invalid`; its `path` is already the JSON path when
 //!    the document path is passed as `at`. A delimited connector's [`Schema`] lists its
-//!    column names.
+//!    column names, a PDF report connector's its template field names.
 //! 2. **Per message.** Wrap the parsed message in its adapter. Evaluate
 //!    [`Filters::passes`] for the channel, then for each enabled destination (a false
 //!    result is `filtered`, not an error). For a destination with a mapping, build the
@@ -164,11 +172,13 @@ mod json;
 mod mapping;
 mod model;
 mod path;
+mod pdf;
 mod record;
 mod require;
 mod rules;
 mod steps;
 mod tables;
+mod value;
 
 pub use astm::AstmModel;
 pub use au::AuModel;
@@ -178,5 +188,7 @@ pub use hl7::Hl7Model;
 pub use mapping::Mapping;
 pub use model::{Model, Schema};
 pub use path::{FieldRef, Path, Scope, Syntax};
+pub use pdf::PdfModel;
 pub use record::RecordModel;
 pub use tables::CodeTable;
+pub use value::ValueType;

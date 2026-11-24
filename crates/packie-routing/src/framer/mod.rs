@@ -36,7 +36,7 @@ pub(crate) trait Framer: Send {
 #[cfg(test)]
 pub(crate) const DEFAULT_MAX_MESSAGE_BYTES: usize = 1_048_576;
 
-/// The framer for `kind`, or `None` for kinds without framing (`raw`, `delimited`).
+/// The framer for `kind`, or `None` for kinds without framing (`raw`, files).
 ///
 /// `max_message_bytes` bounds the bytes retained for one message. For HL7 it limits the
 /// payload between the MLLP delimiters, for ASTM the concatenated record text of one
@@ -48,7 +48,10 @@ pub(crate) fn framer_for(kind: ProtocolKind, max_message_bytes: usize) -> Option
         ProtocolKind::Au => {
             AuFramer::new(max_message_bytes).map(|framer| Box::new(framer) as Box<dyn Framer>)
         }
-        ProtocolKind::Delimited | ProtocolKind::Raw => None,
+        ProtocolKind::Delimited
+        | ProtocolKind::Hl7File
+        | ProtocolKind::PdfReport
+        | ProtocolKind::Raw => None,
     }
 }
 

@@ -17,7 +17,9 @@ use crate::tagged;
 
 pub(crate) use cidr::CIDR_ERROR;
 pub use cidr::{Cidr, CidrError};
-pub use files::{FolderMode, FolderSettings, OnConsumed, SftpAuth, SftpSettings, WriteMode};
+pub use files::{
+    Consumption, FolderMode, FolderSettings, OnConsumed, SftpAuth, SftpSettings, WriteMode,
+};
 pub use serial::{FlowControl, Parity, SerialSettings, StopBits};
 pub use tcp::{KeepAlive, TcpClientSettings, TcpListenerSettings};
 
@@ -84,6 +86,16 @@ impl EndpointConfig {
     #[must_use]
     pub fn kind(&self) -> EndpointKind {
         self.transport.kind()
+    }
+
+    /// How a folder or SFTP source consumes files; `None` for other kinds.
+    #[must_use]
+    pub fn consumption(&self) -> Option<Consumption<'_>> {
+        match &self.transport {
+            Transport::Folder(s) => Some(s.consumption()),
+            Transport::Sftp(s) => Some(s.consumption()),
+            _ => None,
+        }
     }
 
     /// A non-secret one-line description of the settings, for snapshots

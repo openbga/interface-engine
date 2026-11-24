@@ -143,11 +143,12 @@ pub(crate) struct ShowArgs {
     /// sent there). Message content is printed only with this flag.
     #[arg(long, value_parser = body_choice)]
     body: Option<BodyChoice>,
-    /// How to render the body: `text` (control characters made visible) or `hex`.
+    /// How to render the body: `text` (control characters made visible; a PDF report's
+    /// original as its extracted text) or `hex`.
     #[arg(long = "as", default_value = "text", requires = "body", value_parser = body_format)]
     render: BodyFormat,
-    /// Also print the original's fields by the paths filters and mappings use (HL7 and
-    /// ASTM). Message content is printed only with this flag.
+    /// Also print the original's fields by the paths filters and mappings use (HL7, ASTM
+    /// and PDF reports). Message content is printed only with this flag.
     #[arg(long)]
     fields: bool,
     /// Print the message (and body, and fields) as JSON.

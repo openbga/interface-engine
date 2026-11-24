@@ -197,18 +197,30 @@ impl FileSource for FolderSource {
     }
 
     fn consumed(&mut self, unit: &FileUnit) -> BoxFuture<'_, Result<(), LinkError>> {
-        let name = unit.name.clone();
-        Box::pin(async move {
-            let settings = self.settings.clone();
-            let file = name.clone();
-            blocking(move || consume_file(&settings, &file)).await?;
-            self.mark_consumed(name);
-            Ok(())
-        })
+        let directory = self.settings.processed_directory.clone();
+        Box::pin(self.consume(unit.name.clone(), directory))
+    }
+
+    fn consumed_into<'a>(
+        &'a mut self,
+        unit: &'a FileUnit,
+        directory: &'a str,
+    ) -> BoxFuture<'a, Result<(), LinkError>> {
+        Box::pin(self.consume(unit.name.clone(), directory.to_owned()))
     }
 
     fn set_max_file_bytes(&mut self, max_bytes: u64) {
         self.max_bytes = max_bytes;
+    }
+}
+
+impl FolderSource {
+    async fn consume(&mut self, name: String, directory: String) -> Result<(), LinkError> {
+        let settings = self.settings.clone();
+        let file = name.clone();
+        blocking(move || consume_file(&settings, &file, &directory)).await?;
+        self.mark_consumed(name);
+        Ok(())
     }
 }
 
@@ -241,11 +253,20 @@ pub(crate) fn count_files(settings: &FolderSettings) -> Result<usize, LinkError>
     list_folder(settings).map(|files| files.len())
 }
 
-/// Candidate files under the folder (relative names with `/`), skipping the processed
-/// directory.
+/// Candidate files under the folder (relative names with `/`), skipping the processed,
+/// filtered and invalid directories.
 fn list_folder(settings: &FolderSettings) -> Result<Vec<(String, Seen)>, LinkError> {
     let mut out = Vec::new();
-    let processed = settings.path.join(&settings.processed_directory);
+    let consumption = settings.consumption();
+    let processed: Vec<PathBuf> = [
+        Some(consumption.processed),
+        consumption.filtered,
+        consumption.invalid,
+    ]
+    .into_iter()
+    .flatten()
+    .map(|directory| settings.path.join(directory))
+    .collect();
     let mut pending = vec![(settings.path.clone(), String::new())];
     while let Some((dir, prefix)) = pending.pop() {
         let entries = std::fs::read_dir(&dir).map_err(|e| folder_error(&dir, &e))?;
@@ -268,14 +289,14 @@ enum Entry {
 /// A directory to descend into, a candidate file, or nothing.
 fn inspect(
     settings: &FolderSettings,
-    processed: &Path,
+    processed: &[PathBuf],
     entry: &std::fs::DirEntry,
 ) -> Option<Entry> {
     let path = entry.path();
     let name = entry.file_name().to_string_lossy().into_owned();
     let meta = entry.metadata().ok()?;
     if meta.is_dir() {
-        let descend = settings.recursive && path != processed && !name.starts_with('.');
+        let descend = settings.recursive && !processed.contains(&path) && !name.starts_with('.');
         return descend.then_some(Entry::Dir(path, name));
     }
     let wanted =
@@ -323,20 +344,19 @@ fn open_shared_none(path: &Path) -> io::Result<std::fs::File> {
     options.open(path)
 }
 
-fn consume_file(settings: &FolderSettings, name: &str) -> Result<(), LinkError> {
+fn consume_file(settings: &FolderSettings, name: &str, directory: &str) -> Result<(), LinkError> {
     match settings.on_consumed {
         OnConsumed::Leave => Ok(()),
         OnConsumed::Delete => std::fs::remove_file(settings.path.join(name))
             .map_err(|e| LinkError::io(Operation::Write, &e)),
-        OnConsumed::Move => move_processed(settings, name),
+        OnConsumed::Move => move_into(settings, name, directory),
     }
 }
 
-fn move_processed(settings: &FolderSettings, name: &str) -> Result<(), LinkError> {
+fn move_into(settings: &FolderSettings, name: &str, directory: &str) -> Result<(), LinkError> {
     let write_error = |e: &io::Error| LinkError::io(Operation::Write, e);
-    let processed = settings.path.join(&settings.processed_directory);
     let source = settings.path.join(name);
-    let target = processed.join(name);
+    let target = settings.path.join(directory).join(name);
     if let Some(parent) = target.parent() {
         std::fs::create_dir_all(parent).map_err(|e| write_error(&e))?;
     }

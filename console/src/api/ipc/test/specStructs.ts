@@ -333,6 +333,7 @@ export const STRUCTS: Record<string, Struct> = {
     required: ["step", "start"],
   },
   step_replace: allRequired(["step", "find", "with"]),
+  step_strip_suffix: allRequired(["step", "from"]),
   // Calculation operands (section 8.2, Calculations).
   formula_from: { known: ["from", "steps"], required: ["from"] },
   formula_find: {

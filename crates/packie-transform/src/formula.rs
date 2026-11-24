@@ -286,9 +286,10 @@ pub(crate) fn source_text<'m>(
     source: &Source,
     frame: Option<Frame<'_>>,
 ) -> Result<Cow<'m, str>, TooLong> {
-    source
-        .steps
-        .apply(read(model, &source.path, frame).unwrap_or(Cow::Borrowed("")))
+    source.steps.apply(
+        read(model, &source.path, frame).unwrap_or(Cow::Borrowed("")),
+        model,
+    )
 }
 
 /// Reads one operand: text with an optional leading comparator, or an HL7 structured
@@ -332,7 +333,7 @@ fn operand<'f>(
             _ => return Err(not_numeric),
         },
     };
-    let number = source.steps.apply(component(2)).map_err(too_long)?;
+    let number = source.steps.apply(component(2), model).map_err(too_long)?;
     let number = number.trim();
     match (number.is_empty(), bound) {
         (true, None) => Err(Stop::Empty(path)),

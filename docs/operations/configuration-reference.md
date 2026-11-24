@@ -163,21 +163,23 @@ OS timing and log a warning; see the [TCP settings specification](../spec/config
 | `username` | `sftp` | Required | String, 1–255 characters. |
 | `auth.method` | `sftp` | Required | `password` or `key`. |
 | `auth.password` | `sftp` | Required for password auth | Secret reference. |
-| `auth.private_key` | `sftp` | Required for key auth | Secret reference. |
+| `auth.private_key` | `sftp` | Required for key auth | Secret reference to an Ed25519, ECDSA or RSA private key. |
 | `auth.passphrase` | `sftp` | Optional for key auth | Secret reference or `null`. |
-| `host_key_fingerprint` | `sftp` | Required | `SHA256:` plus base64; pinned server key. |
+| `host_key_fingerprint` | `sftp` | Required | `SHA256:` plus base64; pinned server key (Ed25519, ECDSA or RSA). |
 | `remote_directory` | `sftp` | Required | Absolute remote path. |
 | `connect_timeout_ms` | `sftp` | `10000` | Integer, 1–120,000. |
 | `operation_timeout_ms` | `sftp` | `30000` | Integer, 1–600,000 per list/read/write operation. |
 | `mode` | `folder` | `watch` | `watch` or `poll`. |
 | `poll_interval_seconds` | Both | `30` folder; `60` SFTP | Integer, 1–86,400; also the safety poll in folder watch mode. |
 | `file_pattern` | Both | `*` | File-name glob using `?` and `*`. |
-| `recursive` | Both | `false` | Boolean; include subdirectories except `processed_directory`. |
+| `recursive` | Both | `false` | Boolean; include subdirectories except the processed, filtered and invalid directories. |
 | `ignore_suffixes` | Both | `[".tmp", ".part", ".partial", ".crdownload"]` | Array of file-name suffixes never read. |
 | `stable_seconds` | Both | `2` | Integer, 0–3600; unchanged size and modification time before reading. |
 | `exclusive_open_check` | `folder` | `true` | Boolean; also require exclusive read access before reading. |
 | `on_consumed` | Both | `move` | `move`, `delete`, `leave`; after durable receipt. |
 | `processed_directory` | Both | `processed` | Relative to source directory; created when needed. |
+| `filtered_directory` | Both | `null` | `pdf_report` sources with `on_consumed=move`: where a filtered report goes; `null` uses `processed_directory`. Relative, created when needed, different from the other two. |
+| `invalid_directory` | Both | `null` | As `filtered_directory`, for a report that does not parse or is too large. With either set, a report is moved once it is filtered, invalid or routed. |
 | `write_mode` | Both | `atomic_rename` | `atomic_rename` or `direct`. |
 
 Secret references are objects with a `secret` key naming the stored secret. Names match
@@ -262,7 +264,7 @@ produces an unbounded-retention warning.
 | `settings` | Both | Per protocol | Protocol settings below. |
 | `duplicate_detection` | Source | `true` | Boolean. |
 | `filters` | Destination | `[]` | Expressions evaluated on the source message; all must pass. |
-| `mapping` | Destination | `null` | Mapping object below; `null` passes through and requires the source protocol. |
+| `mapping` | Destination | `null` | Mapping object below; `null` passes through and requires the source protocol (`hl7_file` also passes an `hl7_mllp` source through). |
 | `delivery` | Destination | Channel policy | Override individual delivery fields. |
 
 | Protocol | Allowed endpoint kinds | Default / highest `ack_required` |
@@ -270,6 +272,8 @@ produces an unbounded-retention warning.
 | `astm`, `au` | `serial`, `tcp_client`, `tcp_listener` | `received` / `received`; `au` class `a`: `handed_off` |
 | `hl7_mllp` | `tcp_client`, `tcp_listener` | `accepted` / `accepted`; `handed_off` with `ack_mode: none` |
 | `delimited_file` | `folder`, `sftp` | `handed_off` / `handed_off` |
+| `hl7_file` | `folder`, `sftp`; destination only | `handed_off` / `handed_off` |
+| `pdf_report` | `folder`, `sftp`; source only | — |
 
 ### Delivery policy fields
 
@@ -334,6 +338,19 @@ Use the instrument's online parameter sheet. All fields are required except
 | `max_message_bytes` | `1048576` | Integer, 1024–67,108,864. |
 | `frame_timeout_ms` | `30000` | Integer, 1000–300,000. |
 
+### HL7 files (`hl7_file`)
+
+Destination only: each delivery writes one HL7 v2 message as one file (segments ended by
+carriage returns, UTF-8, no MLLP framing), for receivers that collect HL7 files from a folder or
+SFTP server.
+
+| Field | Default | Value or purpose |
+| --- | --- | --- |
+| `file_name` | Required | Template as for delimited files, for example `ORU_{sample_id}_{date}{time}_{seq}.hl7`. |
+| `on_exists` | `suffix` | `suffix`, `overwrite`, `fail`. |
+| `version`, `sending_application`, `sending_facility`, `receiving_application`, `receiving_facility`, `processing_id` | As `hl7_mllp` | Generated MSH-12, MSH-3 through MSH-6 and MSH-11. |
+| `max_message_bytes` | `1048576` | Integer, 1024–67,108,864; a larger mapped message is not written (delivery failed, `transform_error`). |
+
 ### Delimited files (`delimited_file`)
 
 | Field | Default | Value or purpose |
@@ -363,6 +380,35 @@ Use the instrument's online parameter sheet. All fields are required except
 
 The names `control_id`, `sample_id`, `patient_id` also populate message identifiers.
 `raw` has no settings and is carried only by bridges, never message connectors.
+
+### PDF reports (`pdf_report`)
+
+Source only: each born-digital report file is one message, read by a template of labelled
+fields ([PDF reports](../spec/pdf-reports.md)). Start from the shipped newborn screening
+profile.
+
+| Field | Default | Value or purpose |
+| --- | --- | --- |
+| `max_file_bytes` | `20971520` | Integer, 1024–268,435,456; a larger file is recorded as aborted, not read. |
+| `max_pages` | `20` | Integer, 1–500. |
+| `phrase_gap` | `2` | Number, 0.5–20, at most two decimals; a gap this many times the font size separates phrases. |
+| `label_area_end` | `[]` | 0–8 texts; the label area, where every word ending in `:` must be a declared label, ends at the line that begins with one. |
+| `fields` | Required | 1–200 fields below. |
+
+| Field setting | Default | Value or purpose |
+| --- | --- | --- |
+| `name` | Required | Unique name matching `^[a-z][a-z0-9_]{0,40}$`; read as `field.<name>`. |
+| `label` | Required | Label text, or an array of 1–8 alternatives. |
+| `position` | `right` | `right` (on the label's line) or `below` (the block under the label). |
+| `occurrence` | `0` | −1 to 20: which match of the label on a page; −1 the last. |
+| `line`, `phrase`, `indent` | `1`, `0`, `4` | `below` only: block line (1–20), phrase of it (0–20, or −1 for the last), how far right of the label a line may start (0–600 points). |
+| `required` | `false` | Boolean; the label and a value must be on page 1. |
+| `type`, `format` | `string`, none | As delimited columns; `date` and `datetime` take one format or 1–4. |
+
+A report that does not match its template is stored invalid with a reason and a detail that
+names the label or field. The names `control_id`, `sample_id`, `patient_id` also populate
+message identifiers. Mappings read `field.<name>`, `report.pages` and `report.file_base64`
+(the file in Base64, for embedding it in an HL7 `ED` value).
 
 ## Filters and mappings
 
@@ -417,6 +463,8 @@ fields read as empty text. Non-decimal field text fails every numeric comparison
 | `for_each` | `over`, `into`, `rules` | Record names identify input/output occurrences; loops cannot nest. |
 | `sequence` | `to` | `start=1`, integer 0–999,999,999; only inside `for_each` or `append`. |
 
-Date/time tokens are `yyyy`, `yy` (1970–2069), `MM`, `dd`, `HH`, `mm`, `ss`. Tokens are
-fixed-width and may appear only once per format; quote literal letters with single quotes.
+Date/time tokens are `yyyy`, `yy` (1970–2069), `MM`, `dd`, `HH`, `mm`, `ss`, which are
+fixed-width, and `M`, `d`, `H`, which read one or two digits and must be followed by a
+non-digit literal or end the format. Each component may appear only once per format; quote
+literal letters with single quotes.
 At least one token is required. See [date and time formats](../spec/configuration.md#date-and-time-formats).

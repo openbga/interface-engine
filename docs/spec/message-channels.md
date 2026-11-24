@@ -5,7 +5,7 @@ retries, duplicates, resend, retention, pause and crash recovery. Settings are i
 [configuration.md](configuration.md#64-message-channel); fields and alerts are in
 [diagnostics.md](diagnostics.md); shared transport rules (endpoint states, listeners,
 serial ports, retry formula) are in [bridge-channels.md](bridge-channels.md). Requirements:
-MSG-01..08, PRO-01..04, ENG-02, ENG-05, SEC-04.
+MSG-01..08, PRO-01..04, PRO-07, ENG-02, ENG-05, SEC-04.
 
 ## 1. Scope
 
@@ -53,6 +53,7 @@ stores later.
 | `au` | Each accepted frame's exact wire bytes are committed; the sample message completes after its final block. Class A (no ACK/NAK on receive) commits frames without any response. Instrument queries and session messages are stored and closed `filtered` (`control_message`); well-framed text that does not parse is stored `invalid` (`unparseable`); neither is routed. Host-direction frames are rejected without being stored. | Class B: each block ACK waits for its frame commit and the 500 ms turnaround. The final ACK precedes the transaction that finalizes the sample and checks duplicates; all of its wire frames are already durable. | An incomplete sample: `aborted`. |
 | `hl7_mllp` | One MLLP frame (the whole message). Bytes between the start and end block characters are the original bytes. | Per `ack_mode` (below). | A started frame that receives no further bytes for `frame_timeout_ms` (counted while the engine waits for them, not while it commits the frames before it) is discarded and the connection closed. A connection the peer closes or resets ends at once, inside a frame too. An operating system can ignore a reset that arrives right behind bytes it has not yet acknowledged (macOS does on a busy connection), leaving the connection open with nothing to read; so while a TCP source waits for the rest of a message (an HL7 frame, an ASTM or AU transfer with its timer running) it probes the peer with a TCP keep-alive after 1 s of silence, whatever the endpoint's `keep_alive` settings, which apply again once the message is complete. The peer's system answers the probe with a reset that is taken, so a dead sender does not hold the source's single session. A frame left open by either is discarded (`source.frame_abandoned`); it was never acknowledged, so the sender sends it again. |
 | `delimited_file` | Each record or group of a complete file is one message; all of a file's messages are committed in one transaction. A message's original bytes are its rows rewritten with the source columns, including a header when `header_row` is true, without skipped lines or a BOM. The stored form uses the codec's 1 GiB limit because quoting and line endings can make it larger than the input. Its `source_file` holds the file name, the SHA-256 of the whole file and its row range (data rows counted from 1). | The source file is moved, deleted or left per `on_consumed`, only after the commit. A file that cannot be moved or deleted is logged (`file.consume_failed`); reading it again records duplicates when duplicate detection is enabled. | A file over `max_file_bytes` is not read into memory (the transport stops at the limit); one `aborted` message (`file_too_large`, no bytes, `source_file` with its name and an empty hash) records it. A file that does not parse as configured is committed whole as one `invalid` message (`malformed_file`, `encoding`). Both are then consumed like any other file. A commit failure leaves the file where it is; the source reopens the endpoint after the retry delay and reads it again. |
+| `pdf_report` | A complete file is one message; its original bytes are the file's bytes. `source_file` holds the file name and the SHA-256 of the file. Parsing follows the commit, in the pipeline ([pdf-reports.md](pdf-reports.md#2-receipt)). | The source file is moved, deleted or left per `on_consumed`, only after the commit. Without `filtered_directory` and `invalid_directory` that is right after the commit, whether or not the report parses later. With either set, the move waits until parsing and the source filters have decided the message, and its outcome picks the directory: `routed` to `processed_directory`, `filtered` to `filtered_directory`, `invalid` or `aborted` to `invalid_directory`; a `duplicate` goes where the message it repeats went, once that is decided (so a file read again after a restart before the decision is not misplaced). | A file over `max_file_bytes` is recorded `aborted` (`file_too_large`) as for delimited files. A report that does not parse becomes `invalid` in the pipeline with a reason code and `reason_detail`; the original stays. |
 
 HL7 acknowledgement content (source side):
 
@@ -90,7 +91,7 @@ duplicate record is committed.
 | Client source | A `tcp_client` source connects out and receives. It reconnects with the channel `retry` policy; while not connected the channel is `retrying`. |
 | Recovery | The source's failure streak and retry count clear at the first unit committed on a new connection. |
 | Serial source | The port is leased from the port registry and held while the channel runs. Read timeouts are not disconnects. |
-| File source | Detection and completion follow the endpoint settings (`stable_seconds`, `ignore_suffixes`, `exclusive_open_check`); partially written files are never read. Complete files are taken one at a time in order of modified time, then name, and the records of a file become messages in row order. |
+| File source | Detection and completion follow the endpoint settings (`stable_seconds`, `ignore_suffixes`, `exclusive_open_check`); partially written files are never read. Complete files are taken one at a time in order of modified time, then name, and the records of a file become messages in row order. A file's messages are received when the engine takes the file, whatever its modified time. |
 | Transfer limits | ASTM enforces `max_message_bytes`; exceeding it aborts the transfer (`aborted`) with a reason code. A frame with more text than `max_frame_chars` is NAKed like any invalid frame. AU limits each frame by `framing.max_wire_len` and by `frame_timeout_ms` from its first byte (an unfinished frame is discarded without a response), and applies `block_timeout_ms` between the blocks of an incomplete sample; it has no `max_message_bytes` setting. |
 | Response writes | Every response a source writes (ACK, NAK, HL7 acknowledgement) must be written within the protocol's `frame_timeout_ms` (HL7, AU) or `receive_timeout_ms` (ASTM). A peer that does not read its responses in time loses the connection (`source.response_stalled`, shown as the source endpoint's last error); a listener then takes the next peer. A pause or stop ends a write at once, a shutdown drain at the earlier of its deadline and the write limit. |
 | File names | A source file name and a destination `file_name` may carry identifiers. They are stored with the message (`source_file`) but never appear in log events, snapshots or error summaries; those name the message or delivery id. |
@@ -131,6 +132,7 @@ Identifiers are extracted from the parsed message as the protocol provides them:
 | `astm` | H.3 | O.3 of the first O record, or the source's `sample_id_path` (for example `O.4.3`) | P.3 of the first P record | `astm` |
 | `au` | none | sample id field | none | `au` |
 | `delimited_file` | column `control_id` | column `sample_id` | column `patient_id` | `delimited` |
+| `pdf_report` | field `control_id` | field `sample_id` | field `patient_id` | `pdf_report` |
 
 An identifier that is absent is `null`.
 
@@ -141,6 +143,7 @@ An identifier that is absent is `null`.
 `sample_id`, `patient_id` (identifiers as the protocol provides them, nullable),
 `source_endpoint_id`, `source_peer`, `source_file` (name, file hash, row range, for files),
 `response_code`, `responded_at`, `abort_reason`, `reason_code` (for `filtered` and `invalid`),
+`reason_detail` (for an `invalid` PDF report: what failed, in template terms, never report text),
 `config_version` (the version of the channel definition in effect at receipt, including
 an in-place update), and the derived `delivery_summary`: `none`, `pending` (any `queued` or
 `sending`, none needing attention), `attention` (any `rejected`, `failed`, `timed_out`,
@@ -222,7 +225,7 @@ message's own control id, HL7 `MSH-10`; its `MSA-2` is the original's), `error_c
 | `hl7_mllp` | One MLLP frame, then the acknowledgement per `ack_mode` ([section 8](#8-acknowledgement-levels)), correlated by the sent MSH-10. The reply's message code (MSH-9.1) must be `ACK` or one listed in `ack_message_types` (an order response such as `ORL`); any other reply is unmatched ([section 5.2](#52-outcome-unknown-and-timed-out)). |
 | `astm` | One transfer (ENQ … EOT) of the stored records, framed per LIS01-A2 (one record per frame; a record longer than `max_frame_chars` is split with ETB) and driven by the connector's link `role` (contention follows it). ENQ is sent up to `enq_attempts` times, `busy_retry_ms` apart, before the attempt fails as a write failure. |
 | `au` | The frames of the stored AU message, in order, framed per the destination's profile. Test codes are `format.test_code_digits` wide. Class B waits for each frame's ACK and sends a frame again after a NAK, at most 3 times, then fails the attempt as a write failure. AU messages cannot be a mapping target, so an AU destination carries AU messages from an AU source unchanged; only the framing is the destination's. |
-| `delimited_file` | One file per delivery in the endpoint's folder or SFTP directory, written with the endpoint's `write_mode`. Its name is `file_name` with `{message_id}`, `{control_id}`, `{sample_id}`, `{date}` (`yyyyMMdd`), `{time}` (`HHmmss`) and `{seq}` (the receipt sequence) filled in; characters other than letters, digits, `-`, `_` and `.` in a value become `_`. `on_exists` decides what happens when the name exists. Without a mapping the delivery writes the message's original bytes. A mapped file larger than the destination's `max_file_bytes` is not written: the delivery is created `failed` with `transform_error`. Each file is flushed to disk before it counts as written, so a burst of messages faster than the disk syncs files builds a temporary backlog of `queued` deliveries that drains in order afterwards. |
+| `delimited_file`, `hl7_file` | One file per delivery in the endpoint's folder or SFTP directory, written with the endpoint's `write_mode`. Its name is `file_name` with `{message_id}`, `{control_id}`, `{sample_id}`, `{date}` (`yyyyMMdd`), `{time}` (`HHmmss`) and `{seq}` (the receipt sequence) filled in; characters other than letters, digits, `-`, `_` and `.` in a value become `_`. `on_exists` decides what happens when the name exists. Without a mapping the delivery writes the message's original bytes (`hl7_file`: an HL7 source message, its segments each ended by CR). A mapped file larger than the destination's `max_file_bytes` (`hl7_file`: `max_message_bytes`) is not written: the delivery is created `failed` with `transform_error`. Each file is flushed to disk before it counts as written, so a burst of messages faster than the disk syncs files builds a temporary backlog of `queued` deliveries that drains in order afterwards. |
 
 ### 5.2 Outcome unknown and timed out
 
@@ -251,7 +254,7 @@ receive → commit (+ duplicate check) → [acknowledge sender]
 
 | Stage | Rule |
 | --- | --- |
-| Parse | Original bytes are parsed into the protocol model. A failure makes the message `invalid` (reason code), raises no delivery, counts toward `invalid_messages`. The original bytes stay. |
+| Parse | Original bytes are parsed into the protocol model (a PDF report: text extraction and its template, [pdf-reports.md](pdf-reports.md)). A failure makes the message `invalid` (reason code), raises no delivery, counts toward `invalid_messages`. The original bytes stay. |
 | Source filters | The channel `filters` are evaluated in order; all must be true. Otherwise the message is `filtered` (reason `source_filter`), no deliveries. A filter reading an absent field sees empty text. |
 | Destination filters | Each enabled destination's `filters`, in order. A false result creates no delivery for that destination; other destinations proceed. If no destination remains the message is `filtered` (reason `destination_filters` or `no_destination`). |
 | Mapping | Each destination's mapping runs on the parsed model and produces that destination's output message, encoded for its protocol. A same-protocol HL7 or ASTM target starts as a copy of the source message; an HL7 target of another protocol starts with MSH-3 to MSH-7 and MSH-10 to MSH-12 from the destination's settings, a new control id and the current time; an ASTM target starts with the header and terminator records; a delimited target always starts empty and is written with the destination's columns. With `mapping: null` the original bytes are passed through unchanged, except that AU wire frames are rebuilt for the destination's profile. Output and `mapping_version` (the configuration version the mapping came from) are stored with the delivery. |
@@ -286,10 +289,11 @@ by default per source connector (`duplicate_detection`).
 | `astm` | H.5 (sender name), H.14 (message date and time), first specimen id of the message (O.3, or the source's `sample_id_path`). |
 | `au` | Unit, rack, cup and sample id as present in the profile, then the source endpoint id. |
 | `delimited_file` | Relative file path, and for a record or group its row range. |
+| `pdf_report` | Relative file path. |
 
 The **content hash** is SHA-256 of the stored original bytes: the MLLP payload without block
 characters, assembled ASTM records with CR separators, exact AU wire frames including their
-framing and check bytes, or the rewritten rows of one delimited record or group.
+framing and check bytes, the rewritten rows of one delimited record or group, or the bytes of a PDF report file.
 
 | Rule | Statement |
 | --- | --- |
@@ -307,7 +311,7 @@ What each protocol can prove, and what `rejected` means for it:
 
 | Protocol | `handed_off` | `received` | `accepted` | `rejected` |
 | --- | --- | --- | --- | --- |
-| `delimited_file` (folder, SFTP) | File complete in the destination (rename done, SFTP upload and rename done). Highest level. | no | no | never; write errors are attempt failures |
+| `delimited_file`, `hl7_file` (folder, SFTP) | File complete in the destination (rename done, SFTP upload and rename done). Highest level. | no | no | never; write errors are attempt failures |
 | `astm` | no | Receiver ACKed every frame and the transfer ended with EOT. Highest level. | no | never; a NAK after `max_frame_retries` aborts the attempt as a write failure |
 | `au` class B | no | The instrument ACKed every frame. Highest level. | no | never; a frame NAKed after 3 retries fails the attempt as a write failure |
 | `au` class A | Every frame was written; class A has no acknowledgement, so `ack_required` defaults to `handed_off` and higher levels are rejected. | no | no | never |

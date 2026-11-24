@@ -2,13 +2,15 @@
 //! delivery creation (`docs/spec/message-channels.md` §6). Filters and mappings are the
 //! definition's [`Compiled`] form.
 
+use std::sync::Arc;
+
 use packie_config::{Destination, MessageChannel};
 use packie_core::{ConnectorId, MessageId};
 
 use crate::message::store::{
     DestinationPolicy, MessageStore, NewDelivery, StoreError, StoreResult,
 };
-use crate::message::transform::{Compiled, Parsed};
+use crate::message::transform::{Compiled, Invalid, Parsed};
 
 /// How the pipeline ended for one message.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -17,14 +19,14 @@ pub(crate) enum Routed {
     To(Vec<ConnectorId>),
     /// No delivery: the reason code.
     Filtered(&'static str),
-    /// The message does not parse: the reason code.
-    Invalid(String),
+    /// The message does not parse: the reason code and detail.
+    Invalid(Invalid),
 }
 
 /// What the pipeline runs with: the store, the definition and its compiled form.
 pub(crate) struct Pipeline<'a> {
     pub(crate) store: &'a dyn MessageStore,
-    pub(crate) compiled: &'a Compiled,
+    pub(crate) compiled: &'a Arc<Compiled>,
     pub(crate) channel: &'a MessageChannel,
 }
 
@@ -41,11 +43,18 @@ pub(crate) async fn process(
         compiled,
         channel,
     } = pipeline;
-    let parsed = match compiled.parse(original) {
-        Ok((parsed, _)) => parsed,
-        Err(reason) => {
-            store.record_invalid(message, reason.clone()).await?;
-            return Ok(Routed::Invalid(reason));
+    let parsed = match parse(compiled, original).await {
+        Ok(parsed) => parsed,
+        Err(invalid) => {
+            match &invalid.detail {
+                Some(detail) => {
+                    store
+                        .record_invalid_detailed(message, invalid.code.clone(), detail.clone())
+                        .await?;
+                }
+                None => store.record_invalid(message, invalid.code.clone()).await?,
+            }
+            return Ok(Routed::Invalid(invalid));
         }
     };
     if !compiled.source_passes(&parsed) {
@@ -89,6 +98,19 @@ pub(crate) async fn process(
     }
     store.route(message, deliveries, compiled.version).await?;
     Ok(Routed::To(ids))
+}
+
+/// Parses the original; a PDF report on a blocking thread, so a slow or hostile file never
+/// stalls the I/O tasks (`pdf-reports.md` §2).
+pub(crate) async fn parse(compiled: &Arc<Compiled>, original: &[u8]) -> Result<Parsed, Invalid> {
+    if !compiled.parses_off_thread() {
+        return compiled.parse(original).map(|(parsed, _)| parsed);
+    }
+    let compiled = Arc::clone(compiled);
+    let original = original.to_vec();
+    tokio::task::spawn_blocking(move || compiled.parse(&original).map(|(parsed, _)| parsed))
+        .await
+        .unwrap_or_else(|_| Err(Invalid::code("pdf_unreadable")))
 }
 
 /// The frozen policy and output of one destination.

@@ -89,6 +89,15 @@ pub trait FileSource: Send {
     /// again while this source lives.
     fn consumed(&mut self, unit: &FileUnit) -> BoxFuture<'_, Result<(), LinkError>>;
 
+    /// As [`consumed`](Self::consumed), but a moved file goes to `directory` (relative to
+    /// the source directory, such as the endpoint's `filtered_directory`) instead of
+    /// `processed_directory`. `delete` and `leave` are unchanged.
+    fn consumed_into<'a>(
+        &'a mut self,
+        unit: &'a FileUnit,
+        directory: &'a str,
+    ) -> BoxFuture<'a, Result<(), LinkError>>;
+
     /// Sets the largest file, in bytes, that is read into memory (the source's
     /// `max_file_bytes`). A larger file is returned as a unit with
     /// [`FileUnit::too_large`] set and no content, so it can be recorded and consumed

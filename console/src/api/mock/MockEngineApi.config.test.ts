@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { documentToWire } from "@/api/ipc/configDocument";
+import { DEFAULT_CONSUMPTION } from "../ipc/endpointConfig";
 import { at, mockApiFactory, rejection } from "./mockTestSupport";
 
 const create = mockApiFactory({ messageCount: 500, seed: 7 });
@@ -235,6 +236,7 @@ describe("applyConfig", () => {
       mode: "watch",
       pollIntervalSec: 5,
       filePattern: "*.csv",
+      ...DEFAULT_CONSUMPTION,
     });
     doc.channels = doc.channels.filter((c) => c.id !== "ch-br-d100");
     const result = await api.applyConfig(doc, "move the LIS port");

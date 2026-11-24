@@ -1,6 +1,7 @@
 import { Link } from "react-aria-components";
 import type { MessageDetail } from "@/api/types";
 import { Alert } from "@/components/Alert";
+import { TestStoredReport } from "@/features/pdfReports/PdfReportTest";
 import {
   MESSAGE_STATE_MEANING,
   messageStateStatus,
@@ -42,6 +43,10 @@ export function MessageNotices({ detail }: { detail: MessageDetail }) {
         <Alert tone={tone} title={`${messageStateStatus(state).label} message`}>
           <p>{MESSAGE_STATE_MEANING[state]}</p>
           {reason !== null && <p>{reason}</p>}
+          {detail.reasonDetail !== null && <p>What failed: {detail.reasonDetail}.</p>}
+          {state === "invalid" && detail.summary.protocol === "pdf_report" && (
+            <TestStoredReport messageId={detail.summary.id} channelId={detail.summary.channelId} />
+          )}
         </Alert>
       )}
       {unresolved > 0 && (

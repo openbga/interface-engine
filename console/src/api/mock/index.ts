@@ -33,6 +33,8 @@ import type {
   MessagePage,
   MessageQuery,
   NotificationResult,
+  PdfReportTestRequest,
+  PdfReportTestResult,
   ProbeReport,
   ReportFile,
   ResendRequest,
@@ -50,6 +52,7 @@ import * as audited from "./audited";
 import { downloadText } from "./download";
 import { MockHost } from "./mockHost";
 import { sendTestNotifications } from "./notifications";
+import { testPdfReport } from "./pdfReports";
 import { probeEndpoint } from "./probe";
 import { serialPortsOf } from "./serialPorts";
 import { engineInfo, engineSettings } from "./settings";
@@ -157,6 +160,10 @@ export class MockEngineApi extends MockHost implements EngineApi {
 
   testNotification(): Promise<NotificationResult[]> {
     return this.request(() => sendTestNotifications(this.world));
+  }
+
+  testPdfReport(request: PdfReportTestRequest): Promise<PdfReportTestResult> {
+    return this.request(() => testPdfReport(this.world, request));
   }
 
   pauseChannel(id: string): Promise<void> {

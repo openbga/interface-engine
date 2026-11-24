@@ -262,6 +262,20 @@ impl MessageStore for SqliteStore {
         })
     }
 
+    fn record_invalid_detailed(
+        &self,
+        message: MessageId,
+        reason: String,
+        detail: String,
+    ) -> BoxFuture<'_, StoreResult<()>> {
+        self.write(async move {
+            self.store
+                .record_invalid_detailed(message, reason, detail)
+                .await
+                .map_err(error)
+        })
+    }
+
     fn record_filtered(
         &self,
         message: MessageId,

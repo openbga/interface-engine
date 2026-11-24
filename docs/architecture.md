@@ -100,8 +100,9 @@ How OpenBGA Interface Engine is built. Behavior details per area live in `docs/s
 | --- | --- | --- | --- |
 | ASTM E1381 / E1394 (LIS01-A2 / LIS02-A2) | `packie-astm` | receive results, send orders/queries | Frame layer with checksum, ACK/NAK/EOT, retransmission, contention; record layer H/P/O/R/C/Q/L with field accessors. |
 | AU400 / AU640 | `packie-au` | receive results, send worklists | Fixed-width records. |
-| HL7 v2.x | `packie-hl7` | MLLP client and listener; ORU, ORM/OML, ORL, ACK, ADT as generic messages | Generic segment/field/component model with escaping; typed helpers; ACK generation in original and enhanced modes; MLLP streaming framer. Message version from MSH-12. |
+| HL7 v2.x | `packie-hl7` | MLLP client and listener; one message per file to a folder or SFTP server (destination); ORU, ORM/OML, ORL, ACK, ADT as generic messages | Generic segment/field/component model with escaping; typed helpers; ACK generation in original and enhanced modes; MLLP streaming framer. Message version from MSH-12. |
 | Delimited files | `packie-files` | read and write | Templates: delimiter, quoting, header row, column→field mapping, one record per line or grouped. The folder and SFTP transports in `packie-transport` decide when a file is complete (`stable_seconds`, `ignore_suffixes` and, for folders, `exclusive_open_check`). |
+| PDF reports | `packie-pdf` | read | Text layer of born-digital reports (lopdf for the file structure, an engine-owned content-stream walker for positioned text); a template of labelled fields; no OCR. |
 | Raw | `packie-routing` | bridges, taps | No parsing. |
 
 Transformation model (`packie-transform`): a message's parsed model is addressed by paths
@@ -163,7 +164,7 @@ restricted secrets file; never stored in the documents.
 | `packie-core` | Ids (operator-chosen names for configured things, UUIDv7 for engine-created ones), time (`jiff`), common state enums, error conventions, byte helpers | — |
 | `packie-config` | Bootstrap and runtime models, validation (filters and mappings are compiled with `packie-transform` to check them), versioning, atomic persistence, secret references and the secret store (key store or file) | core, transform |
 | `packie-transport` | Endpoint adapters: serial (physical + virtual), TCP client/listener, folder watcher/poller, SFTP; a common async byte-stream/connection trait; port sharing registry | core, config |
-| `packie-astm`, `packie-au`, `packie-hl7`, `packie-files` | Pure protocol codecs (ASTM and AU also carry receive/send drivers; HL7 the MLLP framer and acknowledgement policy; files a complete-file reader and writer); no I/O, no internal dependencies so they build and test on their own | — |
+| `packie-astm`, `packie-au`, `packie-hl7`, `packie-files`, `packie-pdf` | Pure protocol codecs (ASTM and AU also carry receive/send drivers; HL7 the MLLP framer and acknowledgement policy; files a complete-file reader and writer; PDF positioned text and labelled fields); no I/O, no internal dependencies so they build and test on their own | — |
 | `packie-transform` | Paths, mappings, code tables, filters over parsed models; pure, no configuration types | astm, au, hl7 |
 | `packie-store` | SQLite message and delivery store, body files, retention and migrations | core, ipc |
 | `packie-audit` | Append-only, hash-chained audit log in `<state>/audit` (its own SQLite files and writer), review queries, export, chain verification, yearly sealing and retention ([spec/audit.md](spec/audit.md)) | core, ipc |
@@ -177,7 +178,7 @@ restricted secrets file; never stored in the documents.
 | `packie-host` | OS service definitions and control (launchd, systemd, Windows SCM) behind a `ServiceManager` trait, the Windows service entry point, the single-instance lock | core |
 | `packie` (bin) | Hosting (console or service) and CLI; chooses the channel registry | audit, backup, config, core, diagnostics, engine, host, ipc, routing |
 | `console/` | Tauri 2 + React 19 app; `console/src-tauri` is its own Cargo workspace root (empty `[workspace]` table) and reaches engine crates by path | `packie-config`, `packie-core`, `packie-ipc` |
-| `fuzz/` | Separate cargo-fuzz workspace with 12 targets for protocol parsers/drivers, delimited files, transforms, IPC framing and configuration; seed corpora and regression inputs | astm, au, config, files, hl7, ipc, transform |
+| `fuzz/` | Separate cargo-fuzz workspace with 13 targets for protocol parsers/drivers, delimited files, PDF reports, transforms, IPC framing and configuration; seed corpora and regression inputs | astm, au, config, files, hl7, ipc, pdf, transform |
 
 Runtime: `tokio` multi-thread. Serial I/O runs on blocking threads behind async channels
 (`serialport`); the message store has a dedicated writer thread. Blocking backup and

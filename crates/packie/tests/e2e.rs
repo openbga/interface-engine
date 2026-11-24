@@ -341,6 +341,8 @@ fn status_messages_and_logs_against_a_live_engine() {
     check_config_verification(&rig);
     check_superseded_resend(&rig);
     check_setup_checks(&rig);
+    check_pdf_test(&rig);
+    check_pdf_views(&rig);
 }
 
 fn check_status(rig: &Rig) {
@@ -947,6 +949,203 @@ fn check_setup_checks(rig: &Rig) {
         diff.contains("Label: ") && diff.contains("→ Renamed channel"),
         "{diff}"
     );
+}
+
+/// A one-page synthetic report in Helvetica, padded so its Base64 is over 1,000 characters.
+fn synthetic_report(label: &str) -> Vec<u8> {
+    let content = format!(
+        "BT /F1 9 Tf 40 700 Td ({label} SYN-0001) Tj ET\n% {}",
+        "padding ".repeat(120)
+    );
+    format!(
+        "%PDF-1.4\n1 0 obj <</Type/Catalog/Pages 2 0 R>> endobj\n\
+         2 0 obj <</Type/Pages/Kids[3 0 R]/Count 1>> endobj\n\
+         3 0 obj <</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]/Contents 4 0 R\
+         /Resources<</Font<</F1<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>>>>>>> endobj\n\
+         4 0 obj <</Length {}>> stream\n{content}\nendstream endobj\n\
+         trailer <</Root 1 0 R>>\n%%EOF\n",
+        content.len()
+    )
+    .into_bytes()
+}
+
+/// Applies a PDF report channel `reports`: the folder `reports` in, HL7 files to `hl7-out`.
+fn apply_reports_channel(rig: &Rig) {
+    let inbox = rig.dir.path().join("reports");
+    let outbox = rig.dir.path().join("hl7-out");
+    std::fs::create_dir(&inbox).unwrap();
+    std::fs::create_dir(&outbox).unwrap();
+    let mut document: Value = serde_json::from_str(&rig.ok(&["config", "export"])).unwrap();
+    let endpoints = document["endpoints"].as_array_mut().unwrap();
+    endpoints.push(json!({
+        "endpoint_id": "reports-in", "label": "Reports", "kind": "folder", "settings": {"path": inbox},
+    }));
+    endpoints.push(json!({
+        "endpoint_id": "hl7-out", "label": "HL7 files", "kind": "folder", "settings": {"path": outbox},
+    }));
+    document["channels"].as_array_mut().unwrap().push(json!({
+        "kind": "message", "channel_id": "reports", "label": "Reports",
+        "source": {"endpoint": "reports-in", "protocol": "pdf_report", "settings": {
+            "fields": [{"name": "sample_id", "label": "Lab Number:", "required": true}],
+        }},
+        "destinations": [{
+            "destination_id": "hie", "label": "HIE", "endpoint": "hl7-out", "protocol": "hl7_file",
+            "settings": {"file_name": "ORU_{sample_id}.hl7"},
+            "mapping": {"rules": [
+                {"op": "constant", "value": "ORU^R01", "to": "MSH.9"},
+                {"op": "copy", "from": "field.sample_id", "to": "PID.3.1"},
+                {"op": "copy", "from": "report.file_base64", "to": "OBX.5.5"},
+            ]},
+        }],
+    }));
+    let path = rig.dir.path().join("with-reports.json");
+    std::fs::write(&path, document.to_string()).unwrap();
+    rig.ok(&[
+        "config",
+        "apply",
+        path.to_str().unwrap(),
+        "--note",
+        "pdf test",
+    ]);
+}
+
+/// `packie pdf test` with the active template of a PDF report channel: the fields and the
+/// mapped HL7 message (the embedded report shortened), a refused report, and the audit entry.
+fn check_pdf_test(rig: &Rig) {
+    apply_reports_channel(rig);
+    let inbox = rig.dir.path().join("reports");
+    let report = rig.dir.path().join("report.pdf");
+    std::fs::write(&report, synthetic_report("Lab Number:")).unwrap();
+    let report = report.to_str().unwrap();
+    let shown = rig.ok(&[
+        "pdf",
+        "test",
+        report,
+        "--channel",
+        "reports",
+        "--destination",
+        "hie",
+    ]);
+    assert!(
+        shown.contains("field.sample_id") && shown.contains("SYN-0001"),
+        "{shown}"
+    );
+    assert!(shown.contains("PID|||SYN-0001"), "{shown}");
+    assert!(
+        shown.contains("OBX|||||^^^^JVBERi0xLjQ") && shown.contains(" characters)"),
+        "{shown}"
+    );
+    let json = rig.json(&["pdf", "test", report, "--channel", "reports", "--json"]);
+    assert_eq!(json["ok"], true, "{json}");
+    assert_eq!(
+        json["pages"][0]["lines"][0]["phrases"][0]["text"],
+        "Lab Number: SYN-0001"
+    );
+
+    let mismatch = rig.dir.path().join("mismatch.pdf");
+    std::fs::write(&mismatch, synthetic_report("Lab No:")).unwrap();
+    let output = rig.packie(&[
+        "pdf",
+        "test",
+        mismatch.to_str().unwrap(),
+        "--channel",
+        "reports",
+    ]);
+    assert_eq!(output.status.code(), Some(1));
+    let out = text(&output.stdout);
+    assert!(
+        out.contains("template_mismatch") && !out.contains("Lab No:"),
+        "{out}"
+    );
+    assert!(
+        std::fs::read_dir(&inbox).unwrap().next().is_none(),
+        "nothing is stored or moved"
+    );
+
+    let audit = rig.ok(&["audit", "list", "--action", "pdf_report_test"]);
+    assert!(audit.contains("pdf_report_test"), "{audit}");
+}
+
+/// Stored PDF reports (after `check_pdf_test` added the channel): the HL7 file written for
+/// the report that reads, the original as its extracted text and as hex, the template's
+/// fields, an invalid report's reason, and the export with bodies.
+fn check_pdf_views(rig: &Rig) {
+    let inbox = rig.dir.path().join("reports");
+    for (name, label) in [
+        ("a-report.pdf", "Lab Number:"),
+        ("b-mismatch.pdf", "Lab No:"),
+    ] {
+        let staged = rig.dir.path().join(name);
+        std::fs::write(&staged, synthetic_report(label)).unwrap();
+        std::fs::rename(&staged, inbox.join(name)).unwrap();
+    }
+    let mut messages = Vec::new();
+    eventually("both reports are stored and parsed", || {
+        let page = rig.json(&["messages", "list", "--channel", "reports", "--json"]);
+        messages = page["messages"].as_array().cloned().unwrap_or_default();
+        messages.len() == 2
+            && messages
+                .iter()
+                .all(|m| matches!(m["state"].as_str(), Some("routed" | "invalid")))
+    });
+    let id = |state: &str| {
+        let message = messages.iter().find(|m| m["state"] == state).unwrap();
+        id_of(message, "message_id")
+    };
+    let (routed, invalid) = (id("routed"), id("invalid"));
+    let written = rig.dir.path().join("hl7-out").join("ORU_SYN-0001.hl7");
+    eventually("the HL7 file is written", || written.exists());
+    let hl7 = std::fs::read_to_string(&written).unwrap();
+    assert!(
+        hl7.contains("\rPID|||SYN-0001\r") && hl7.contains("^^^^JVBERi0xLjQ"),
+        "{hl7:?}"
+    );
+
+    let text = rig.ok(&["messages", "show", &routed, "--body", "original"]);
+    assert!(text.contains("Page 1\nLab Number: SYN-0001"), "{text}");
+    assert!(!text.contains("%PDF"), "{text}");
+    let hex = rig.ok(&[
+        "messages", "show", &routed, "--body", "original", "--as", "hex",
+    ]);
+    assert!(hex.contains("%PDF-1.4"), "{hex}");
+    let fields = rig.json(&["messages", "show", &routed, "--fields", "--json"]);
+    assert_eq!(
+        fields["fields"]["fields"],
+        json!([
+            {"path": "field.sample_id", "value": "SYN-0001"},
+            {"path": "report.pages", "value": "1"},
+        ])
+    );
+
+    let text = rig.ok(&["messages", "show", &invalid, "--body", "original"]);
+    assert!(text.contains("Lab No: SYN-0001"), "{text}");
+    let fields = rig.json(&["messages", "show", &invalid, "--fields", "--json"]);
+    let reason = fields["fields"]["unavailable"].as_str().unwrap();
+    assert!(
+        reason.contains("does not read with its channel's template")
+            && reason.contains("Lab Number:")
+            && !reason.contains("SYN-0001"),
+        "{reason}"
+    );
+
+    let jsonl = rig.ok(&[
+        "messages",
+        "export",
+        "--channel",
+        "reports",
+        "--format",
+        "jsonl",
+        "--bodies",
+    ]);
+    let bodies: Vec<String> = jsonl
+        .lines()
+        .map(|line| serde_json::from_str::<Value>(line).unwrap()["body"].to_string())
+        .collect();
+    assert!(
+        bodies.iter().any(|b| b.contains("Lab Number: SYN-0001")),
+        "{jsonl}"
+    );
+    assert!(!jsonl.contains("%PDF"), "{jsonl}");
 }
 
 fn check_superseded_resend(rig: &Rig) {

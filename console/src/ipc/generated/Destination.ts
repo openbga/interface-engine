@@ -3,7 +3,9 @@ import type { AstmSettings } from "./AstmSettings";
 import type { AuSettings } from "./AuSettings";
 import type { DelimitedSettings } from "./DelimitedSettings";
 import type { DeliveryOverrides } from "./DeliveryOverrides";
+import type { Hl7FileSettings } from "./Hl7FileSettings";
 import type { Hl7Settings } from "./Hl7Settings";
+import type { PdfReportSettings } from "./PdfReportSettings";
 
 /**
  * A destination connector.
@@ -37,4 +39,4 @@ mapping: unknown,
 /**
  * Field-by-field overrides of the channel's delivery policy.
  */
-delivery: DeliveryOverrides, } & ({ "protocol": "astm", "settings": AstmSettings } | { "protocol": "au", "settings": AuSettings } | { "protocol": "hl7_mllp", "settings": Hl7Settings } | { "protocol": "delimited_file", "settings": DelimitedSettings } | { "protocol": "raw" });
+delivery: DeliveryOverrides, } & ({ "protocol": "astm", "settings": AstmSettings } | { "protocol": "au", "settings": AuSettings } | { "protocol": "hl7_mllp", "settings": Hl7Settings } | { "protocol": "hl7_file", "settings": Hl7FileSettings } | { "protocol": "delimited_file", "settings": DelimitedSettings } | { "protocol": "pdf_report", "settings": PdfReportSettings } | { "protocol": "raw" });

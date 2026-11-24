@@ -51,6 +51,10 @@ const ENDPOINT_FIELDS: Record<string, string> = {
   "auth.passphrase.secret": "passphraseSecretName",
   host_key_fingerprint: "hostKeyFingerprint",
   remote_directory: "remotePath",
+  on_consumed: "onConsumed",
+  processed_directory: "processedDirectory",
+  filtered_directory: "filteredDirectory",
+  invalid_directory: "invalidDirectory",
 };
 
 /** Fields whose console value is a list, so an index in the engine path stays. */
@@ -323,16 +327,18 @@ const VARIANT_KEYS: Record<string, string> = {
   sample_id_path: "sampleIdPath",
 };
 
+/** Protocols whose settings the console edits as one JSON text (`templateJson`). */
+const JSON_SETTINGS = new Set(["delimited_file", "pdf_report", "hl7_file"]);
+
 function settingsKey(key: string, protocol: string | undefined): Translated {
+  if (protocol !== undefined && JSON_SETTINGS.has(protocol)) return "templateJson";
   const plain = withoutIndexes(key);
   const known = VARIANT_KEYS[plain];
-  if (known !== undefined && protocol !== "au" && protocol !== "delimited_file") return known;
+  if (known !== undefined && protocol !== "au") return known;
   if (plain === "ack_mode") return "ackMode";
   if (plain === "role") return "astmRole";
   const first = plain.split(".")[0] ?? "";
-  if (DELIMITED_KEYS.has(first) || (protocol === "delimited_file" && first === "charset")) {
-    return "templateJson";
-  }
+  if (DELIMITED_KEYS.has(first)) return "templateJson";
   if (protocol === "hl7_mllp" || protocol === "astm") return null;
   const au = AU_FIELDS[plain];
   if (au === undefined) return null;

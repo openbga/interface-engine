@@ -8,6 +8,9 @@ use crate::bodies::{BodyStorage, content_hash};
 use crate::counters::{increment, note_error};
 use crate::{Destination, Error, Receipt, ReceiptOutcome, Result, Store, column};
 
+/// Longest `reason_detail` kept (`docs/spec/message-channels.md` §3).
+const MAX_REASON_DETAIL: usize = 300;
+
 impl Store {
     /// Commits receipt and original bytes before returning. If destinations are already
     /// selected, inserts them atomically; otherwise leaves `received` for the pipeline.
@@ -145,7 +148,7 @@ impl Store {
         message: MessageId,
         reason: impl Into<String>,
     ) -> Result<()> {
-        self.record_verdict(message, MessageState::Filtered, reason.into())
+        self.record_verdict(message, MessageState::Filtered, reason.into(), None)
             .await
     }
     /// Marks a complete unprocessed message invalid, as [`Store::record_filtered`] does
@@ -158,14 +161,33 @@ impl Store {
         message: MessageId,
         reason: impl Into<String>,
     ) -> Result<()> {
-        self.record_verdict(message, MessageState::Invalid, reason.into())
+        self.record_verdict(message, MessageState::Invalid, reason.into(), None)
             .await
     }
+
+    /// As [`Store::record_invalid`], with what failed (`reason_detail`, at most 300
+    /// characters; longer text is cut). The detail names template items and positions,
+    /// never message content.
+    ///
+    /// # Errors
+    /// As [`Store::record_filtered`].
+    pub async fn record_invalid_detailed(
+        &self,
+        message: MessageId,
+        reason: impl Into<String>,
+        detail: impl Into<String>,
+    ) -> Result<()> {
+        let detail: String = detail.into().chars().take(MAX_REASON_DETAIL).collect();
+        self.record_verdict(message, MessageState::Invalid, reason.into(), Some(detail))
+            .await
+    }
+
     async fn record_verdict(
         &self,
         message: MessageId,
         state: MessageState,
         reason: String,
+        detail: Option<String>,
     ) -> Result<()> {
         if reason.trim().is_empty() {
             return Err(Error::Invalid("reason required".into()));
@@ -182,8 +204,8 @@ impl Store {
             }
             tx.execute_cached("DELETE FROM deliveries WHERE message_id=?", [message])?;
             tx.execute_cached(
-                "UPDATE messages SET state=?,reason_code=? WHERE id=?",
-                params![state.to_string(), reason, message],
+                "UPDATE messages SET state=?,reason_code=?,reason_detail=? WHERE id=?",
+                params![state.to_string(), reason, detail, message],
             )?;
             increment(
                 tx,

@@ -272,6 +272,122 @@ async fn config(client: &IpcClient) -> serde_json::Value {
     }
 }
 
+/// A one-page synthetic report in Helvetica, Base64-encoded.
+fn report_file(text: &str) -> String {
+    use base64::Engine as _;
+    let content = format!("BT /F1 9 Tf 40 700 Td ({text}) Tj ET");
+    let pdf = format!(
+        "%PDF-1.4\n1 0 obj <</Type/Catalog/Pages 2 0 R>> endobj\n\
+         2 0 obj <</Type/Pages/Kids[3 0 R]/Count 1>> endobj\n\
+         3 0 obj <</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]/Contents 4 0 R\
+         /Resources<</Font<</F1<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>>>>>>> endobj\n\
+         4 0 obj <</Length {}>> stream\n{content}\nendstream endobj\n\
+         trailer <</Root 1 0 R>>\n%%EOF\n",
+        content.len()
+    );
+    base64::engine::general_purpose::STANDARD.encode(pdf)
+}
+
+/// A template of two fields, and a request reading `file` with `settings`.
+fn pdf_template() -> (
+    serde_json::Value,
+    impl Fn(serde_json::Value, Option<String>) -> Request,
+) {
+    use packie_ipc::pdf::PdfReportTest;
+    let template = json!({"fields": [
+        {"name": "sample_id", "label": "Lab Number:", "required": true},
+        {"name": "dob", "label": "DOB:", "type": "date", "format": "M/d/yyyy"},
+    ]});
+    let test = |settings: serde_json::Value, file: Option<String>| {
+        Request::TestPdfReport(PdfReportTest {
+            settings,
+            file,
+            message_id: None,
+            destination: None,
+        })
+    };
+    (template, test)
+}
+
+/// `TestPdfReport`: a report read with a template (no destination, so the no-op registry is
+/// never asked for a preview).
+async fn tests_pdf_reports(client: &IpcClient) {
+    let (template, test) = pdf_template();
+    let Ok(Response::PdfReportTested(result)) = client
+        .request(test(
+            template.clone(),
+            Some(report_file("Lab Number: SYN-0001  DOB: 1/2/2026")),
+        ))
+        .await
+    else {
+        panic!("the report is read");
+    };
+    assert!(result.ok, "{result:?}");
+    let fields: Vec<(&str, &str)> = result
+        .fields
+        .iter()
+        .map(|f| (f.path.as_str(), f.value.as_str()))
+        .collect();
+    assert_eq!(
+        fields,
+        [
+            ("field.sample_id", "SYN-0001"),
+            ("field.dob", "1/2/2026"),
+            ("report.pages", "1")
+        ]
+    );
+    assert_eq!(
+        result.pages[0].lines[0].phrases[0].text,
+        "Lab Number: SYN-0001 DOB: 1/2/2026"
+    );
+    assert_eq!(result.output, None);
+
+    refuses_pdf_reports(client).await;
+}
+
+/// A field that fails its type, an invalid template, and requests that name no report; each
+/// test is audited.
+async fn refuses_pdf_reports(client: &IpcClient) {
+    let (template, test) = pdf_template();
+    let Ok(Response::PdfReportTested(refused)) = client
+        .request(test(
+            template.clone(),
+            Some(report_file("Lab Number: SYN-0001 DOB: 2026-01-02")),
+        ))
+        .await
+    else {
+        panic!("the report is examined");
+    };
+    assert!(!refused.ok);
+    assert_eq!(refused.reason_code.as_deref(), Some("field_invalid"));
+    assert_eq!(
+        refused.reason_detail.as_deref(),
+        Some("field \"dob\" does not match its formats")
+    );
+    assert!(refused.fields.is_empty() && !refused.pages.is_empty());
+
+    let invalid = server_error(
+        client
+            .request(test(
+                json!({"fields": [{"name": "x", "label": []}]}),
+                Some(report_file("x")),
+            ))
+            .await,
+    );
+    assert_eq!(invalid.code, ErrorCode::InvalidConfig);
+    assert_eq!(invalid.field_errors[0].path, "settings.fields[0].label");
+    for file in [None, Some("not base64!".to_owned())] {
+        let error = server_error(client.request(test(template.clone(), file)).await);
+        assert_eq!(error.code, ErrorCode::BadRequest, "{error:?}");
+    }
+    let audited = test_audit().records.records();
+    assert!(
+        audited
+            .iter()
+            .any(|r| r.action == AuditAction::PdfReportTest)
+    );
+}
+
 fn server_error(result: Result<Response, ClientError>) -> packie_ipc::IpcError {
     match result {
         Err(ClientError::Server(error)) => error,
@@ -664,6 +780,7 @@ async fn serves_snapshots_and_applies_configuration() {
     messages_and_hooks_are_not_available_yet(client).await;
     manages_secrets_and_alerts(client).await;
     one_transcript_viewer_per_channel(&loaded.ipc_endpoint(), channel).await;
+    tests_pdf_reports(client).await;
     audits_commands_and_fails_closed(client).await;
     keeps_the_change_control_record(client).await;
     takes_backups_on_request(client, dir.path()).await;

@@ -61,6 +61,8 @@ export interface SettingChange {
   becomes: string | boolean;
   /** False when the connector already has this value. */
   changes: boolean;
+  /** What the table shows instead of the values, for a template too long to show. */
+  shown?: { now: string; becomes: string };
 }
 
 export interface SettingsPlan {
@@ -144,7 +146,56 @@ export function sourceHints(
     });
 }
 
+/** Protocols whose settings the form holds as one JSON object (`templateJson`). */
+const JSON_PROTOCOLS = new Set(["delimited_file", "pdf_report", "hl7_file"]);
+
+/** `fields: 37 entries` for each key of `keys` in `settings`. */
+function describe(settings: Record<string, unknown>, keys: readonly string[]): string {
+  return keys
+    .map((key) => {
+      const value = settings[key];
+      if (value === undefined) return `${key}: not set`;
+      if (Array.isArray(value))
+        return `${key}: ${value.length} ${value.length === 1 ? "entry" : "entries"}`;
+      return `${key}: ${JSON.stringify(value)}`;
+    })
+    .join("; ");
+}
+
+/**
+ * A preset of a JSON-template protocol (a PDF report template): the keys it lists replace the
+ * template's own, the rest of the template stays. A template that is not JSON is replaced.
+ */
+function planTemplate(profile: ConnectorProfile, current: SettingsFormValues): SettingsPlan {
+  let parsed: Record<string, unknown> = {};
+  try {
+    const value: unknown = JSON.parse(current.templateJson);
+    if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+      parsed = value as Record<string, unknown>;
+    }
+  } catch {
+    // Not JSON yet: the preset's template replaces it.
+  }
+  const keys = Object.keys(profile.settings);
+  const merged = { ...parsed, ...profile.settings };
+  const becomes = JSON.stringify(merged, null, 2);
+  return {
+    changes: [
+      {
+        field: "templateJson",
+        label: "Template (JSON)",
+        now: current.templateJson,
+        becomes,
+        changes: JSON.stringify(parsed) !== JSON.stringify(merged),
+        shown: { now: describe(parsed, keys), becomes: describe(merged, keys) },
+      },
+    ],
+    unknown: [],
+  };
+}
+
 export function planProfile(profile: ConnectorProfile, current: SettingsFormValues): SettingsPlan {
+  if (JSON_PROTOCOLS.has(profile.protocol)) return planTemplate(profile, current);
   return planSettings(profile.settings, current);
 }
 

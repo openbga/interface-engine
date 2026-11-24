@@ -27,7 +27,8 @@ poll_interval_seconds: number,
  */
 file_pattern: string, 
 /**
- * Include sub-directories (except `processed_directory`). Default `false`.
+ * Include sub-directories (except the processed, filtered and invalid directories).
+ * Default `false`.
  */
 recursive: boolean, 
 /**
@@ -50,6 +51,16 @@ on_consumed: OnConsumed,
  * Relative to `path`; created when needed. Default `processed`.
  */
 processed_directory: string, 
+/**
+ * `pdf_report` sources with `move`: where a `filtered` report goes. Default `null`
+ * (`processed_directory`).
+ */
+filtered_directory: string | null, 
+/**
+ * `pdf_report` sources with `move`: where an `invalid` or `aborted` report goes.
+ * Default `null` (`processed_directory`).
+ */
+invalid_directory: string | null, 
 /**
  * Default `atomic_rename`.
  */

@@ -36,9 +36,11 @@ interface MessageDef {
 
 const RESULT_TYPE: Record<Protocol, string> = {
   hl7_mllp: "ORU^R01",
+  hl7_file: "ORU^R01",
   astm: "ASTM result",
   au: "AU result",
   delimited_file: "CSV row",
+  pdf_report: "PDF report",
   raw: "Raw frame",
 };
 
