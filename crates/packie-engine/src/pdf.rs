@@ -150,6 +150,7 @@ fn field(field: &PdfField) -> packie_pdf::Field {
         labels: field.label.to_vec(),
         position,
         occurrence: field.occurrence,
+        first_page_only: field.first_page_only,
         required: field.required,
     }
 }

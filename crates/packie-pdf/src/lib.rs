@@ -30,6 +30,7 @@
 //!         labels: vec!["Lab Number:".into()],
 //!         position: Position::Right,
 //!         occurrence: 0,
+//!         first_page_only: false,
 //!         required: true,
 //!     }],
 //!     ..Template::default()

@@ -117,8 +117,12 @@
           {
             "name": "dob",
             "label": "DOB:",
-            "type": "datetime",
-            "format": "M/d/yyyy HH:mm"
+            "first_page_only": true,
+            "type": "date",
+            "format": [
+              "M/d/yyyy HH:mm",
+              "M/d/yyyy"
+            ]
           },
           {
             "name": "birth_order",
@@ -163,8 +167,11 @@
           {
             "name": "collected",
             "label": "Date Collected:",
-            "type": "datetime",
-            "format": "M/d/yyyy HH:mm"
+            "type": "date",
+            "format": [
+              "M/d/yyyy HH:mm",
+              "M/d/yyyy"
+            ]
           },
           {
             "name": "sample_id",
@@ -1416,11 +1423,30 @@
             ]
           },
           {
-            "op": "datetime",
-            "from": "field.dob",
-            "to": "PID.7",
-            "input": "M/d/yyyy HH:mm",
-            "output": "yyyyMMddHHmm"
+            "op": "when",
+            "condition": {
+              "path": "field.dob",
+              "op": "matches",
+              "value": ":"
+            },
+            "then": [
+              {
+                "op": "datetime",
+                "from": "field.dob",
+                "to": "PID.7",
+                "input": "M/d/yyyy HH:mm",
+                "output": "yyyyMMddHHmm"
+              }
+            ],
+            "else": [
+              {
+                "op": "datetime",
+                "from": "field.dob",
+                "to": "PID.7",
+                "input": "M/d/yyyy",
+                "output": "yyyyMMdd"
+              }
+            ]
           },
           {
             "op": "lookup",
@@ -1650,11 +1676,30 @@
             "to": "OBR.4.3"
           },
           {
-            "op": "datetime",
-            "from": "field.collected",
-            "to": "OBR.7",
-            "input": "M/d/yyyy HH:mm",
-            "output": "yyyyMMddHHmm"
+            "op": "when",
+            "condition": {
+              "path": "field.collected",
+              "op": "matches",
+              "value": ":"
+            },
+            "then": [
+              {
+                "op": "datetime",
+                "from": "field.collected",
+                "to": "OBR.7",
+                "input": "M/d/yyyy HH:mm",
+                "output": "yyyyMMddHHmm"
+              }
+            ],
+            "else": [
+              {
+                "op": "datetime",
+                "from": "field.collected",
+                "to": "OBR.7",
+                "input": "M/d/yyyy",
+                "output": "yyyyMMdd"
+              }
+            ]
           },
           {
             "op": "datetime",
@@ -1779,11 +1824,30 @@
             "to": "SPM.2"
           },
           {
-            "op": "datetime",
-            "from": "field.collected",
-            "to": "SPM.17",
-            "input": "M/d/yyyy HH:mm",
-            "output": "yyyyMMddHHmm"
+            "op": "when",
+            "condition": {
+              "path": "field.collected",
+              "op": "matches",
+              "value": ":"
+            },
+            "then": [
+              {
+                "op": "datetime",
+                "from": "field.collected",
+                "to": "SPM.17",
+                "input": "M/d/yyyy HH:mm",
+                "output": "yyyyMMddHHmm"
+              }
+            ],
+            "else": [
+              {
+                "op": "datetime",
+                "from": "field.collected",
+                "to": "SPM.17",
+                "input": "M/d/yyyy",
+                "output": "yyyyMMdd"
+              }
+            ]
           },
           {
             "op": "datetime",
