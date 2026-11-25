@@ -503,6 +503,7 @@ Source only. Behavior, matching rules and the model are in [pdf-reports.md](pdf-
 | `label` | string or array | none | 1–100 characters, or an array of 1–8 such strings. |
 | `position` | string | `right` | `right` or `below`. |
 | `occurrence` | integer | `0` | −1 to 20. |
+| `first_page_only` | boolean | `false` | |
 | `line` | integer | `1` | 1–20; only with `below`. |
 | `phrase` | integer | `0` | −1 to 20 (−1 the last phrase of the line); only with `below`. |
 | `indent` | number | `4` | 0–600 points, at most 2 decimal places; only with `below`. |

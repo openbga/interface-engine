@@ -41,6 +41,7 @@ fn template() -> Template {
         labels: vec![label.into()],
         position,
         occurrence: 0,
+        first_page_only: false,
         required: false,
     };
     Template {

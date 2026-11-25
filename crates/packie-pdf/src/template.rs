@@ -35,6 +35,8 @@ pub struct Field {
     pub position: Position,
     /// Which match of the label on a page: 0 the first, 1 the second, −1 the last.
     pub occurrence: i32,
+    /// Read on page 1 only; the label on later pages (a footer repeating it) is ignored.
+    pub first_page_only: bool,
     /// The label must be on page 1 with a value.
     pub required: bool,
 }
@@ -125,7 +127,10 @@ impl Template {
             if number == 0 {
                 page.check_label_area(&hits, &ends)?;
             }
-            for (index, value) in page.values(&hits, &self.fields) {
+            let fields = page.values(&hits, &self.fields).into_iter();
+            for (index, value) in
+                fields.filter(|(i, _)| number == 0 || !self.fields[*i].first_page_only)
+            {
                 found[index].push((number, value));
             }
         }

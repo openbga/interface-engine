@@ -129,6 +129,7 @@ fn right(name: &str, label: &str) -> Field {
         labels: vec![label.into()],
         position: Position::Right,
         occurrence: 0,
+        first_page_only: false,
         required: false,
     }
 }
@@ -319,6 +320,38 @@ fn conflicting_pages_are_refused() {
         detail,
         "field \"sample_id\" has different values on pages 1 and 2"
     );
+}
+
+#[test]
+fn a_first_page_field_ignores_its_label_on_later_pages() {
+    // Page 2 carries only the footer, which repeats the birth date without its time.
+    let footer = |page: &str| Run {
+        size: 8.0,
+        ..run(400.0, 760.0, &format!("Page {page} of 2   DOB: 1/2/2026"))
+    };
+    let mut first = report_page();
+    first.runs.retain(|r| !r.text.starts_with("Page "));
+    first.runs.push(footer("1"));
+    let bytes = pdf(&[first, Page::new(vec![footer("2")])]);
+    let (reason, detail) = reason(read(&bytes));
+    assert_eq!(reason, Reason::TemplateMismatch);
+    assert_eq!(
+        detail,
+        "field \"dob\" has different values on pages 1 and 2"
+    );
+
+    let mut template = template();
+    let dob = template
+        .fields
+        .iter_mut()
+        .find(|f| f.name == "dob")
+        .unwrap();
+    dob.first_page_only = true;
+    let report = template
+        .read(&extract(&bytes, &Limits::default()).unwrap())
+        .unwrap();
+    assert_eq!(report.pages, 2);
+    assert_values(&report);
 }
 
 #[test]

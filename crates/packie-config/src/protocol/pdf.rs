@@ -54,6 +54,9 @@ pub struct PdfField {
     /// Which match of the label on a page: 0 the first, −1 the last; −1 to 20. Default 0.
     #[serde(default)]
     pub occurrence: i32,
+    /// Read on page 1 only; the label on later pages is ignored. Default `false`.
+    #[serde(default)]
+    pub first_page_only: bool,
     /// `below` only: the block line, 1–20. Default 1.
     #[serde(default)]
     pub line: Option<u32>,

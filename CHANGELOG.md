@@ -6,7 +6,7 @@
 What changed in OpenBGA Interface Engine, grouped by release with unreleased changes on
 top, then by impact. Types follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Unreleased (2026-11-12 to 2026-11-24)
+## Unreleased (2026-11-12 to 2026-11-25)
 
 ### High impact
 
@@ -172,6 +172,22 @@ top, then by impact. Types follow [Keep a Changelog](https://keepachangelog.com/
   outputs can contain PHI.
 
 ### Medium impact
+
+- **Fixed:** Multi-page newborn screening reports and dates without a time are read (2026-11-25)
+
+  The newborn screening report preset now reads reports that run to two or more pages, where
+  the footer repeats the date of birth without its time, and reports that print the date of
+  birth or the collection date without a time. Such reports were refused as not matching the
+  template; now the HL7 message carries the date alone when the report prints no time.
+
+  Technical notes:
+
+  New PDF template field setting `first_page_only` (default `false`): the field is read on
+  page 1 only. Profile `pdf_newborn_screening_report`: `dob` has `first_page_only: true`;
+  `dob` and `collected` are `type: date` with formats `M/d/yyyy HH:mm` and `M/d/yyyy`.
+  Mapping `pdf_newborn_screening_to_hl7_oru`: PID-7, OBR-7 and SPM-17 are written as
+  `yyyyMMddHHmm` when the value has a time, otherwise `yyyyMMdd`. Channels created from the
+  earlier presets keep their settings; apply the presets again or make the same edits.
 
 - **Changed:** PDF reports are filed by date inside their outcome folders (2026-11-24)
 

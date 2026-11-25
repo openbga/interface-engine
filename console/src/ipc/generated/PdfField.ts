@@ -25,6 +25,10 @@ position: FieldPosition,
  */
 occurrence: number, 
 /**
+ * Read on page 1 only; the label on later pages is ignored. Default `false`.
+ */
+first_page_only: boolean, 
+/**
  * `below` only: the block line, 1–20. Default 1.
  */
 line: number | null, 

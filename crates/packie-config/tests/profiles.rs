@@ -470,3 +470,14 @@ fn an_oml_specimen_id_with_a_namespace_is_sent_as_the_bare_identifier() {
     let sent = run_on(&preset, &input).expect("accepted");
     assert!(sent.contains("O|1|SPEC1234|"), "{sent:?}");
 }
+
+#[test]
+fn a_newborn_report_without_times_sends_dates() {
+    let preset = preset("pdf_newborn_screening_to_hl7_oru");
+    let input = changed(&preset.sample.input, "dob: 1/2/2026 08:05", "dob: 1/2/2026");
+    let input = changed(&input, "collected: 1/3/2026 10:00", "collected: 1/3/2026");
+    let sent = run_on(&preset, &input).expect("accepted");
+    assert!(sent.contains("|DOE^TEST BABY||20260102|F|"), "{sent:?}");
+    assert!(sent.contains("|INITIAL^Initial^L|||20260103|"), "{sent:?}");
+    assert!(sent.ends_with("|20260103|20260104\r"), "{sent:?}");
+}
